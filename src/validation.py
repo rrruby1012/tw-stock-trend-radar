@@ -232,7 +232,7 @@ def walk_forward(panel: pd.DataFrame, feature_cols: list[str], cfg: dict) -> dic
     return results
 
 
-def credibility_check(results: dict, cfg: dict) -> tuple[bool, list[str]]:
+def credibility_check(results: dict, cfg: dict) -> tuple[bool, list[str], str]:
     """判斷模型是否具備可信的預測能力（以 up_10 為主）。
 
     條件（門檻皆來自 config credibility 區段）：
@@ -240,7 +240,10 @@ def credibility_check(results: dict, cfg: dict) -> tuple[bool, list[str]]:
     - AUC 優於 always_up 基準 >= min_auc_improvement
     - Brier score 優於 always_up 基準 >= min_brier_improvement
 
-    回傳 (是否可信, 原因字串列表)。任一條件不滿足都會寫清楚原因。
+    回傳 (是否可信, 原因字串列表, 狀態)。
+    狀態為 "ok"（通過）、"failed"（驗證執行成功但未優於基準）、
+    "insufficient"（驗證未執行或資料不足，無法評估）。
+    任一條件不滿足都會寫清楚原因。
     """
     cfcfg = get(cfg, "credibility", default={}) or {}
     min_oos = int(cfcfg.get("min_oos_samples", 500))
@@ -248,18 +251,21 @@ def credibility_check(results: dict, cfg: dict) -> tuple[bool, list[str]]:
     min_brier_imp = float(cfcfg.get("min_brier_improvement", 0.005))
 
     reasons: list[str] = []
+    insufficient = False
     target = results.get("targets", {}).get("up_10")
     if target is None:
-        return False, ["缺少 up_10 目標的驗證結果，無法評估可信度。"]
+        return False, ["缺少 up_10 目標的驗證結果，無法評估可信度。"], "insufficient"
     m = target.get("metrics", {}) or {}
 
     n = int(m.get("n") or 0)
     if n < min_oos:
         reasons.append(f"樣本外樣本數僅 {n}，未達門檻 {min_oos}。")
+        insufficient = True
 
     auc, auc_base = m.get("auc"), m.get("auc_always")
     if auc is None or auc_base is None:
         reasons.append("樣本外僅有單一類別（或類別不足），無法計算 ROC-AUC。")
+        insufficient = True
     elif (auc - auc_base) < min_auc_imp:
         reasons.append(
             f"AUC 僅優於基準 {auc - auc_base:.4f}（模型 {auc:.4f} vs 基準 {auc_base:.4f}），"
@@ -269,6 +275,7 @@ def credibility_check(results: dict, cfg: dict) -> tuple[bool, list[str]]:
     brier, brier_base = m.get("brier"), m.get("brier_always")
     if brier is None or brier_base is None:
         reasons.append("無法計算 Brier score。")
+        insufficient = True
     elif (brier_base - brier) < min_brier_imp:
         reasons.append(
             f"Brier score 僅優於基準 {brier_base - brier:.5f}"
@@ -278,10 +285,12 @@ def credibility_check(results: dict, cfg: dict) -> tuple[bool, list[str]]:
 
     credible = not reasons
     if credible:
+        status = "ok"
         reasons.append(
             f"通過可信度檢驗：樣本外 n={n}，AUC {auc:.4f}（優於基準 {auc - auc_base:.4f}），"
             f"Brier {brier:.5f}（優於基準 {brier_base - brier:.5f}）。"
         )
     else:
+        status = "insufficient" if insufficient else "failed"
         log.warning("模型未通過可信度檢驗：%s", "；".join(reasons))
-    return credible, reasons
+    return credible, reasons, status
