@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>個股詳情 - 台股趨勢雷達</title>
+<meta name="description" content="個股趨勢機率估計、價格走勢與預測紀錄。僅供研究與教育用途。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <a class="backlink" href="index.html">‹ 返回首頁</a>
+    <h1 id="stock-title">載入中…</h1>
+    <div class="sub" id="stock-sub"></div>
+  </header>
+
+  <div id="alert-zone"></div>
+  <div id="content"><div class="loading">載入中…</div></div>
+
+  <footer class="footer" id="footer" style="display:none">
+    <h3>風險提醒</h3>
+    <p>所有機率與價格區間皆為模型估計值，不代表未來實際走勢。虛擬交易回測已納入手續費、證券交易稅與滑價，但仍無法完全反映真實交易成本與市場衝擊。</p>
+    <h3>免責聲明</h3>
+    <p id="f-disclaimer"></p>
+  </footer>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var symbol = App.getQueryParam("symbol");
+
+  function showError(msg) {
+    var c = document.getElementById("content");
+    c.innerHTML = "";
+    c.appendChild(App.el("div", "error-box", msg));
+  }
+
+  function section(title) {
+    var h = App.el("h2", "section-title", title);
+    document.getElementById("content").appendChild(h);
+    return h;
+  }
+
+  function card() {
+    var c = App.el("div", "card");
+    document.getElementById("content").appendChild(c);
+    return c;
+  }
+
+  function renderHeader(p, meta) {
+    document.getElementById("stock-title").textContent =
+      App.text(p.symbol) + " " + App.text(p.name);
+    document.getElementById("stock-sub").textContent =
+      "資料日期：" + App.fmtDate(p.price_date);
+
+    var c = card();
+    var priceLine = App.el("div", "", "");
+    var pv = App.el("span", "num", "");
+    pv.style.fontSize = "1.8rem";
+    pv.style.fontWeight = "800";
+    pv.textContent = App.fmtPrice(p.close);
+    priceLine.appendChild(pv);
+    priceLine.appendChild(App.el("span", "muted small", "  最新收盤價（" + App.fmtDate(p.price_date) + "）"));
+    c.appendChild(priceLine);
+
+    var badges = App.el("div", "statusbar");
+    if (p.adjusted_price === true) {
+      badges.appendChild(App.el("span", "badge ok", "還原權息價格"));
+    } else if (p.adjusted_price === false) {
+      badges.appendChild(App.el("span", "badge warn", "未還原價格"));
+    }
+    if (p.price_warning) {
+      badges.appendChild(App.el("span", "badge warn", String(p.price_warning)));
+    }
+    c.appendChild(badges);
+    if (p.adjusted_price === false) {
+      c.appendChild(App.el("p", "small muted",
+        "注意：此為未還原價格，除權息日會出現價格跳空，請勿誤判為暴跌。"));
+    }
+
+    var t = App.el("div", "mt", "");
+    t.appendChild(App.el("span", "muted small", "趨勢："));
+    t.appendChild(App.trendBadge(p.trend));
+    c.appendChild(t);
+  }
+
+  function renderProbs(p) {
+    section("機率估計");
+    var c = card();
+    c.appendChild(App.probRow("10 個交易日後上漲機率", p.p_up_10));
+    c.appendChild(App.probRow("20 個交易日後上漲機率", p.p_up_20));
+    c.appendChild(App.probRow("10 個交易日後跑贏加權指數機率", p.p_exc_10));
+    c.appendChild(App.probRow("20 個交易日後跑贏加權指數機率", p.p_exc_20));
+  }
+
+  function renderInterval(p) {
+    section("預估價格區間與下行風險");
+    var c = card();
+    function iv(label, ivObj, risk) {
+      var lo = ivObj && ivObj.lo, hi = ivObj && ivObj.hi;
+      var line = App.el("div", "kv", "");
+      line.appendChild(App.el("span", "k", label + " "));
+      var tag = App.estTag();
+      var klab = line.firstChild;
+      klab.appendChild(tag);
+      var v = App.el("span", "v num",
+        App.isValidNumber(lo) && App.isValidNumber(hi)
+          ? App.fmtPrice(lo) + " ~ " + App.fmtPrice(hi)
+          : App.NO_DATA);
+      line.appendChild(v);
+      c.appendChild(line);
+      var rk = App.el("div", "kv", "");
+      var rkl = App.el("span", "k", "下行風險 ");
+      rkl.appendChild(App.estTag());
+      rk.appendChild(rkl);
+      var rv = App.el("span", "v num", App.fmtPct(risk));
+      rk.appendChild(rv);
+      c.appendChild(rk);
+    }
+    iv("未來 10 個交易日價格區間", p.interval_10, p.downside_risk_10);
+    iv("未來 20 個交易日價格區間", p.interval_20, p.downside_risk_20);
+    c.appendChild(App.el("p", "small muted",
+      "價格區間與下行風險由歷史波動度推估，僅為估計值，實際價格可能超出區間。"));
+  }
+
+  function renderSignals(p) {
+    section("訊號與判斷條件");
+    var c = card();
+    c.appendChild(App.el("h3", "", "主要有利訊號"));
+    c.appendChild(App.sigList(p.bull_signals, "bull"));
+    c.appendChild(App.el("h3", "mt", "主要風險訊號"));
+    c.appendChild(App.sigList(p.bear_signals, "bear"));
+    c.appendChild(App.el("h3", "mt", "判斷失效條件"));
+    c.appendChild(App.el("p", "", App.text(p.invalidation)));
+  }
+
+  function renderChart(hist) {
+    section("價格走勢（近 250 個交易日）");
+    var wrap = App.el("div", "chart-wrap");
+    document.getElementById("content").appendChild(wrap);
+    var prices = (hist && hist.prices) || [];
+    App.drawPriceChart(wrap, prices.slice(-250));
+  }
+
+  function renderHistory(p, hist) {
+    section("預測紀錄與歷史表現");
+    var c = card();
+    c.appendChild(App.kvRow("10日上漲預測歷史命中率（估計值）", App.fmtPct(p.hit_rate_10)));
+    c.appendChild(App.kvRow("樣本外樣本數", App.isValidNumber(p.oos_n) ? Number(p.oos_n).toLocaleString("zh-TW") : App.NO_DATA));
+    c.appendChild(App.kvRow("最大回撤（估計值）", App.fmtPct(p.max_drawdown)));
+
+    var recs = (hist && hist.predictions) || [];
+    var valid = recs.filter(function (r) { return r[2] === 1 || r[2] === 0; });
+    var hits = valid.filter(function (r) {
+      return (r[1] >= 0.5 && r[2] === 1) || (r[1] < 0.5 && r[2] === 0);
+    }).length;
+    var sub = App.el("h3", "mt", "近期預測 vs 實際（10日）");
+    c.appendChild(sub);
+    if (!valid.length) {
+      c.appendChild(App.el("p", "muted small", "尚無已實現的預測紀錄。"));
+    } else {
+      c.appendChild(App.el("p", "small muted",
+        "已實現 " + valid.length + " 筆，命中 " + hits + " 筆（" + (100 * hits / valid.length).toFixed(1) + "%）。"));
+      var ul = App.el("ul", "hist-list");
+      valid.slice(-15).reverse().forEach(function (r) {
+        var li = App.el("li", "");
+        li.appendChild(App.el("span", "num", App.fmtDate(r[0])));
+        var pv = App.el("span", "num", "");
+        pv.textContent = App.fmtPct(r[1]);
+        pv.appendChild(App.estTag());
+        li.appendChild(pv);
+        var actual = r[2] === 1 ? "上漲" : "下跌";
+        var hit = (r[1] >= 0.5 && r[2] === 1) || (r[1] < 0.5 && r[2] === 0);
+        var mark = App.el("span", hit ? "hit" : "miss", (hit ? "✓ 命中" : "✗ 未命中") + "（實際" + actual + "）");
+        li.appendChild(mark);
+        ul.appendChild(li);
+      });
+      c.appendChild(ul);
+    }
+    document.getElementById("content").appendChild(c);
+  }
+
+  if (!symbol) {
+    showError("未指定股票代號。請由首頁點選個股進入。");
+    return;
+  }
+
+  App.fetchJSON("data/meta.json").then(function (mr) {
+    var meta = (mr.ok && mr.data) || {};
+    document.getElementById("f-disclaimer").textContent = App.text(meta.risk_disclaimer);
+    document.getElementById("footer").style.display = "";
+    if (meta.model_valid === false) {
+      var zone = document.getElementById("alert-zone");
+      var a = App.el("div", "alert danger");
+      a.appendChild(App.el("strong", "", "模型目前不具可靠預測能力"));
+      a.appendChild(App.el("div", "", "以下機率僅為未通過驗證的模型輸出，請勿作為決策依據。"));
+      zone.appendChild(a);
+    }
+
+    App.fetchJSON("data/predictions.json").then(function (pr) {
+      if (!pr.ok || !Array.isArray(pr.data)) {
+        showError("預測資料讀取失敗（data/predictions.json）。");
+        return;
+      }
+      var p = null;
+      pr.data.forEach(function (row) {
+        if (String(row.symbol) === String(symbol)) p = row;
+      });
+      if (!p) {
+        showError("找不到代號 " + symbol + " 的資料（可能已排除或資料不足）。");
+        return;
+      }
+      document.getElementById("content").innerHTML = "";
+      renderHeader(p, meta);
+      renderProbs(p);
+      renderInterval(p);
+      renderSignals(p);
+
+      App.fetchJSON("data/history_" + encodeURIComponent(symbol) + ".json").then(function (hr) {
+        var hist = (hr.ok && hr.data) || null;
+        renderChart(hist);
+        renderHistory(p, hist);
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>
