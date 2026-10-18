@@ -315,7 +315,11 @@ var App = (function () {
         });
         if (row.symbol) {
           rtr.addEventListener("click", function () {
-            window.location.href = "stock.html?symbol=" + encodeURIComponent(row.symbol);
+            var url = "stock.html?symbol=" + encodeURIComponent(row.symbol);
+            if (window.__archiveDate) {
+              url += "&date=" + encodeURIComponent(window.__archiveDate);
+            }
+            window.location.href = url;
           });
         }
         tbody.appendChild(rtr);
