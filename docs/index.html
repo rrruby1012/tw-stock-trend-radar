@@ -84,6 +84,12 @@
   function renderAlert(meta) {
     var zone = document.getElementById("alert-zone");
     zone.innerHTML = "";
+    if (meta.reconstructed) {
+      var n = App.el("div", "alert info");
+      n.appendChild(App.el("strong", "", "回測重建存檔"));
+      n.appendChild(App.el("div", "", App.text(meta.reconstructed_note)));
+      zone.appendChild(n);
+    }
     if (meta.model_valid === false) {
       var a = App.el("div", "alert danger");
       a.appendChild(App.el("strong", "", "模型目前不具可靠預測能力"));
@@ -109,7 +115,19 @@
         render: function (r) { return App.el("span", "num", App.fmtPrice(r.close)); },
         getValue: function (r) { return r.close; } },
       { key: "p_up_10", label: "10日上漲機率", sortable: true,
-        render: function (r) { return App.probCell(r.p_up_10); },
+        render: function (r) {
+          var cell = App.probCell(r.p_up_10);
+          // 重建存檔：顯示實際結果對照
+          if (r.reconstructed && r.actual_up_10 !== null && r.actual_up_10 !== undefined) {
+            var hit = (r.p_up_10 >= 0.5) === !!r.actual_up_10;
+            var tag = App.el("span", "badge " + (hit ? "ok" : "warn"),
+              (hit ? "✓ " : "✗ ") + (r.actual_up_10 ? "實際上漲" : "實際下跌"));
+            tag.style.marginLeft = "6px";
+            tag.style.fontSize = "0.72rem";
+            cell.appendChild(tag);
+          }
+          return cell;
+        },
         getValue: function (r) { return r.p_up_10; } },
       { key: "p_up_20", label: "20日上漲機率", sortable: true,
         render: function (r) { return App.probCell(r.p_up_20); },
