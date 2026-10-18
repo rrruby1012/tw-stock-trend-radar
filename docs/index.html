@@ -92,9 +92,16 @@
     }
     if (meta.model_valid === false) {
       var a = App.el("div", "alert danger");
-      a.appendChild(App.el("strong", "", "模型目前不具可靠預測能力"));
-      a.appendChild(App.el("div", "",
-        "樣本外驗證結果未優於基準模型，因此本站不顯示預測排行榜。以下僅提供市場資料與歷史統計，不構成投資建議。"));
+      // 區分「驗證未通過」與「無足夠驗證資料」，避免誤導
+      if (meta.validation_status === "insufficient") {
+        a.appendChild(App.el("strong", "", "尚無足夠驗證資料"));
+        a.appendChild(App.el("div", "",
+          "樣本外驗證尚未執行或資料不足，無法評估模型預測能力，因此本站不顯示預測排行榜。以下僅提供市場資料與歷史統計，不構成投資建議。"));
+      } else {
+        a.appendChild(App.el("strong", "", "模型目前不具可靠預測能力"));
+        a.appendChild(App.el("div", "",
+          "樣本外驗證結果未優於基準模型，因此本站不顯示預測排行榜。以下僅提供市場資料與歷史統計，不構成投資建議。"));
+      }
       zone.appendChild(a);
       return false;
     }
@@ -216,6 +223,7 @@
 
   // 主流程：載入指定日期的資料（null = 最新）
   function loadDay(archDate) {
+    window.__archiveDate = archDate || null;
     var isArchive = !!archDate;
     var metaPath = isArchive ? "data/archive/meta_" + archDate + ".json" : "data/meta.json";
     var predPath = isArchive ? "data/archive/predictions_" + archDate + ".json" : "data/predictions.json";
@@ -277,8 +285,37 @@
     });
   }
 
-  loadDay(null);
-  initArchive();
+  // 支援 ?date=YYYY-MM-DD 直接開啟歷史存檔（由個股頁返回時用）
+  var initDate = App.getQueryParam("date");
+  function startWithArchive() {
+    App.fetchJSON("data/archive/index.json").then(function (res) {
+      var valid = res.ok && Array.isArray(res.data) &&
+        res.data.some(function (e) { return e.date === initDate; });
+      if (valid) {
+        loadDay(initDate);
+        // 選單載入後同步選取值
+        var sel = document.getElementById("archive-select");
+        if (sel) {
+          var iv = setInterval(function () {
+            if (sel.options.length > 1) {
+              sel.value = initDate;
+              clearInterval(iv);
+            }
+          }, 200);
+          setTimeout(function () { clearInterval(iv); }, 5000);
+        }
+      } else {
+        loadDay(null);
+      }
+      initArchive();
+    }).catch(function () {
+      loadDay(null);
+      initArchive();
+    });
+  }
+
+  if (initDate) startWithArchive();
+  else { loadDay(null); initArchive(); }
 })();
 </script>
 </body>
