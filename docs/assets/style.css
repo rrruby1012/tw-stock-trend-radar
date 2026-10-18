@@ -91,6 +91,18 @@ a { color: var(--accent); }
   max-width: 100%;
 }
 
+/* ---------- 排除名單 ---------- */
+.excluded-list {
+  margin: 8px 0 0;
+  padding-left: 1.2em;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.excluded-list .sym {
+  font-weight: 600;
+  color: var(--text);
+}
+
 /* ---------- 狀態列 / 警示 ---------- */
 .statusbar {
   display: flex;
