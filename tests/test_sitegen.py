@@ -99,6 +99,23 @@ def test_history檔含價格與預測紀錄(panel_small, watchlist_small, base_c
     assert len(hist["prices"][0]) == 3
 
 
+def test_每日存檔會寫入並建立索引(panel_small, watchlist_small, base_cfg, tmp_path):
+    """generate_site 應在 data/archive/ 下產生日期存檔與 index.json。"""
+    out = _run_generate(panel_small, watchlist_small, base_cfg, tmp_path)
+    arch = out / "data" / "archive"
+    assert (arch / "index.json").exists()
+    index = _load(arch / "index.json")
+    assert len(index) == 1 and index[0]["date"] == "2024-05-31"
+    for name in ["predictions_2024-05-31.json", "meta_2024-05-31.json"]:
+        p = arch / name
+        assert p.exists(), f"{name} 不存在"
+        _load(p)
+    # 再跑一次同日期不應重複加入索引
+    _run_generate(panel_small, watchlist_small, base_cfg, tmp_path)
+    index2 = _load(arch / "index.json")
+    assert len(index2) == 1
+
+
 def test_缺機率時不報錯且趨勢退回盤整(panel_small, watchlist_small, base_cfg, tmp_path):
     """proba_series 缺某檔資料時，網站仍應產生（趨勢以 0.5 計為盤整）。"""
     sids = sorted(panel_small.index.get_level_values("stock_id").unique())
