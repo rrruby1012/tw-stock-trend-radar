@@ -71,6 +71,26 @@ a { color: var(--accent); }
   margin-bottom: 4px;
 }
 
+/* ---------- 歷史存檔選單 ---------- */
+.archivebar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.archivebar select {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  max-width: 100%;
+}
+
 /* ---------- 狀態列 / 警示 ---------- */
 .statusbar {
   display: flex;
