@@ -184,20 +184,33 @@
     document.getElementById("risk-section").style.display = "";
   }
 
-  function renderValidation(meta) {
-    var cred = meta.credibility || {};
+  function renderValidation(meta, validation) {
     var body = document.getElementById("validation-body");
     body.innerHTML = "";
     var card = App.el("div", "card");
     card.appendChild(App.el("h3", "", "樣本外驗證（walk-forward）"));
-    card.appendChild(App.kvRow("驗證目標", App.text(cred.target)));
-    card.appendChild(App.kvRow("樣本外樣本數", App.isValidNumber(cred.oos_n) ? Number(cred.oos_n).toLocaleString("zh-TW") : App.NO_DATA));
-    card.appendChild(App.kvRow("AUC（模型 / 基準）",
-      App.isValidNumber(cred.auc) ? cred.auc.toFixed(3) + " / " + (App.isValidNumber(cred.auc_baseline) ? cred.auc_baseline.toFixed(3) : App.NO_DATA) : App.NO_DATA));
-    card.appendChild(App.kvRow("Brier score（模型 / 基準）",
-      App.isValidNumber(cred.brier) ? cred.brier.toFixed(4) + " / " + (App.isValidNumber(cred.brier_baseline) ? cred.brier_baseline.toFixed(4) : App.NO_DATA) : App.NO_DATA));
+    var targets = (validation && validation.targets) || {};
+    ["up_10", "up_20"].forEach(function (t) {
+      var m = (targets[t] && targets[t].metrics) || {};
+      var label = t === "up_10" ? "10 日上漲" : "20 日上漲";
+      card.appendChild(App.el("h3", "mt", label));
+      card.appendChild(App.kvRow("樣本數",
+        App.isValidNumber(m.n) ? Number(m.n).toLocaleString("zh-TW") : App.NO_DATA));
+      card.appendChild(App.kvRow("AUC（模型 / 全猜上漲基準 / 動量基準）",
+        App.isValidNumber(m.auc)
+          ? m.auc.toFixed(3) + " / " +
+            (App.isValidNumber(m.auc_always) ? m.auc_always.toFixed(3) : App.NO_DATA) + " / " +
+            (App.isValidNumber(m.auc_mom) ? m.auc_mom.toFixed(3) : App.NO_DATA)
+          : App.NO_DATA));
+      card.appendChild(App.kvRow("Brier score（模型 / 全猜上漲基準 / 動量基準）",
+        App.isValidNumber(m.brier)
+          ? m.brier.toFixed(4) + " / " +
+            (App.isValidNumber(m.brier_always) ? m.brier_always.toFixed(4) : App.NO_DATA) + " / " +
+            (App.isValidNumber(m.brier_mom) ? m.brier_mom.toFixed(4) : App.NO_DATA)
+          : App.NO_DATA));
+    });
     card.appendChild(App.el("p", "small muted",
-      "模型僅在樣本外表現優於基準時才會被標示為可信；詳細各期指標請見 validation.json。"));
+      "無論模型是否通過驗證，此處皆顯示真實樣本外數據；詳細各期指標請見 validation.json。"));
     body.appendChild(card);
     document.getElementById("validation-section").style.display = "";
   }
@@ -234,41 +247,102 @@
     f.style.display = "";
   }
 
+  // 非同步競速防護：只有最後一次選擇的日期可以更新畫面
+  var loadRequestId = 0;
+
+  // 研究用歷史資料表（模型未通過時顯示）：灰色、明確標註不可靠，僅顯示實際存在的欄位
+  function renderResearchTable(preds) {
+    var sec = document.getElementById("ranking-section");
+    sec.style.display = "";
+    sec.querySelector(".section-title").textContent = "研究用歷史資料表";
+    var note = sec.querySelector(".small.muted");
+    if (note) note.textContent = "以下為模型原始輸出，僅供研究歷史資料用，不可稱為推薦或排行。";
+    var warn = App.el("div", "alert danger");
+    warn.appendChild(App.el("strong", "", "模型不可靠，禁止作為投資建議"));
+    var host = document.getElementById("ranking-table");
+    host.innerHTML = "";
+    host.appendChild(warn);
+    // 只顯示實際存在的欄位：代號、收盤、10日上漲機率（若有）
+    var cols = [
+      { key: "symbol", label: "代號 / 名稱", sortable: true, defaultDir: 1,
+        render: symCell, getValue: function (r) { return r.symbol || ""; } },
+      { key: "close", label: "收盤", sortable: true,
+        render: function (r) { return App.el("span", "num", App.fmtPrice(r.close)); },
+        getValue: function (r) { return r.close; } },
+    ];
+    var hasP10 = preds.some(function (r) { return App.isValidNumber(r.p_up_10); });
+    if (hasP10) {
+      cols.push({ key: "p_up_10", label: "10日上漲機率（未驗證）", sortable: true,
+        render: function (r) {
+          var cell = App.probCell(r.p_up_10);
+          if (r.reconstructed && r.actual_up_10 !== null && r.actual_up_10 !== undefined) {
+            var hit = (r.p_up_10 >= 0.5) === !!r.actual_up_10;
+            var tag = App.el("span", "badge " + (hit ? "ok" : "warn"),
+              (hit ? "✓ " : "✗ ") + (r.actual_up_10 ? "實際上漲" : "實際下跌"));
+            tag.style.marginLeft = "6px";
+            tag.style.fontSize = "0.72rem";
+            cell.appendChild(tag);
+          }
+          return cell;
+        },
+        getValue: function (r) { return r.p_up_10; } });
+    }
+    host.appendChild(App.buildSortableTable(cols, preds, { key: "symbol", dir: 1 }));
+    host.classList.add("research-gray");
+  }
+
   // 主流程：載入指定日期的資料（null = 最新）
   function loadDay(archDate) {
+    var myId = ++loadRequestId;
     window.__archiveDate = archDate || null;
     var isArchive = !!archDate;
     var metaPath = isArchive ? "data/archive/meta_" + archDate + ".json" : "data/meta.json";
     var predPath = isArchive ? "data/archive/predictions_" + archDate + ".json" : "data/predictions.json";
+    // 切換時先清除舊內容，避免殘留與警告重複
+    document.getElementById("content").innerHTML = "";
+    document.getElementById("alert-zone").innerHTML = "";
+    document.getElementById("ranking-section").style.display = "none";
+    document.getElementById("risk-section").style.display = "none";
+    document.getElementById("validation-section").style.display = "none";
+    var rankingHost = document.getElementById("ranking-table");
+    rankingHost.innerHTML = "";
+    rankingHost.classList.remove("research-gray");
+    // 恢復排行榜標題（研究表會改掉它）
+    var rankTitle = document.querySelector("#ranking-section .section-title");
+    if (rankTitle) rankTitle.textContent = "預測排行榜";
+
     App.fetchJSON(metaPath).then(function (res) {
+      if (myId !== loadRequestId) return; // 已被更新的選擇取代
       if (!res.ok) {
         showError("資料尚未產生（" + metaPath + " 讀取失敗）。請等待自動更新完成後再試。");
         return;
       }
       var meta = res.data || {};
-      document.getElementById("content").innerHTML = "";
-      document.getElementById("ranking-section").style.display = "none";
-      document.getElementById("risk-section").style.display = "none";
-      document.getElementById("validation-section").style.display = "none";
       renderStatus(meta, isArchive, archDate);
       var valid = renderAlert(meta);
       renderFooter(meta);
-      if (valid) renderValidation(meta);
+
+      // 驗證數據一律從 validation.json 讀取（無論模型通過與否）
+      var valPath = isArchive ? null : "data/validation.json";
+      var valPromise = valPath ? App.fetchJSON(valPath) : Promise.resolve({ ok: false });
 
       App.fetchJSON(predPath).then(function (pr) {
-        if (!pr.ok || !Array.isArray(pr.data)) {
-          if (valid) showError("預測資料讀取失敗（" + predPath + "）。");
-          return;
-        }
-        if (valid) {
-          renderRanking(pr.data);
-          renderRisk(pr.data);
-        } else {
-          var info = App.el("div", "alert info");
-          info.appendChild(App.el("strong", "", "暫不提供預測排行榜"));
-          info.appendChild(App.el("div", "", "模型未通過驗證，本站不產生推薦名單。"));
-          document.getElementById("content").appendChild(info);
-        }
+        if (myId !== loadRequestId) return;
+        return valPromise.then(function (vr) {
+          if (myId !== loadRequestId) return;
+          var validation = (vr.ok && vr.data) || null;
+          renderValidation(meta, validation);
+          if (!pr.ok || !Array.isArray(pr.data)) {
+            if (valid) showError("預測資料讀取失敗（" + predPath + "）。");
+            return;
+          }
+          if (valid) {
+            renderRanking(pr.data);
+            renderRisk(pr.data);
+          } else {
+            renderResearchTable(pr.data);
+          }
+        });
       });
     });
   }
