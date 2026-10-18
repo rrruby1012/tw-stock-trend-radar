@@ -1,0 +1,23 @@
+# 台股兩週至一個月趨勢雷達 - 依賴套件
+# 安裝：pip install -r requirements.txt
+
+# 資料抓取
+requests>=2.31.0
+FinMind>=1.8.0
+
+# 資料處理與分析
+pandas>=2.0.0
+numpy>=1.24.0
+pyarrow>=14.0.0  # parquet 快取讀寫
+
+# 機器學習
+scikit-learn>=1.3.0
+
+# 視覺化（網站圖表以內嵌 SVG/前端 JS 為主，此處僅供測試與除錯）
+matplotlib>=3.7.0
+
+# 設定檔
+pyyaml>=6.0
+
+# 測試
+pytest>=7.4.0
