@@ -91,6 +91,16 @@ a { color: var(--accent); }
   max-width: 100%;
 }
 
+/* ---------- 研究用歷史資料表（模型未通過時，灰色警示樣式） ---------- */
+.research-gray {
+  filter: grayscale(0.7);
+  opacity: 0.92;
+}
+.research-gray .alert.danger {
+  filter: none;
+  opacity: 1;
+}
+
 /* ---------- 排除名單 ---------- */
 .excluded-list {
   margin: 8px 0 0;
