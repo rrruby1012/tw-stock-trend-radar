@@ -14,6 +14,10 @@
     <div class="sub">兩週至一個月趨勢機率估計 · 僅供研究與教育用途</div>
   </header>
 
+  <div id="archive-bar" class="archivebar" style="display:none">
+    <label for="archive-select">查看歷史存檔：</label>
+    <select id="archive-select" aria-label="選擇歷史存檔日期"></select>
+  </div>
   <div id="statusbar" class="statusbar"></div>
   <div id="alert-zone"></div>
 
@@ -62,9 +66,12 @@
     c.appendChild(box);
   }
 
-  function renderStatus(meta) {
+  function renderStatus(meta, isArchive, archDate) {
     var bar = document.getElementById("statusbar");
     bar.innerHTML = "";
+    if (isArchive) {
+      bar.appendChild(App.el("span", "badge warn", "歷史存檔：" + App.fmtDate(archDate)));
+    }
     bar.appendChild(App.el("span", "", "最後更新：" + App.fmtDateTime(meta.generated_at)));
     var day = App.el("span", "badge " + (meta.is_trading_day ? "ok" : "muted"),
       meta.is_trading_day ? "交易日" : "非交易日");
@@ -189,35 +196,71 @@
     f.style.display = "";
   }
 
-  // 主流程
-  App.fetchJSON("data/meta.json").then(function (res) {
-    if (!res.ok) {
-      showError("資料尚未產生（data/meta.json 讀取失敗）。請等待自動更新完成後再試。");
-      return;
-    }
-    var meta = res.data || {};
-    document.getElementById("content").innerHTML = "";
-    renderStatus(meta);
-    var valid = renderAlert(meta);
-    renderFooter(meta);
-    if (valid) renderValidation(meta);
-
-    App.fetchJSON("data/predictions.json").then(function (pr) {
-      if (!pr.ok || !Array.isArray(pr.data)) {
-        if (valid) showError("預測資料讀取失敗（data/predictions.json）。");
+  // 主流程：載入指定日期的資料（null = 最新）
+  function loadDay(archDate) {
+    var isArchive = !!archDate;
+    var metaPath = isArchive ? "data/archive/meta_" + archDate + ".json" : "data/meta.json";
+    var predPath = isArchive ? "data/archive/predictions_" + archDate + ".json" : "data/predictions.json";
+    App.fetchJSON(metaPath).then(function (res) {
+      if (!res.ok) {
+        showError("資料尚未產生（" + metaPath + " 讀取失敗）。請等待自動更新完成後再試。");
         return;
       }
-      if (valid) {
-        renderRanking(pr.data);
-        renderRisk(pr.data);
-      } else {
-        var info = App.el("div", "alert info");
-        info.appendChild(App.el("strong", "", "暫不提供預測排行榜"));
-        info.appendChild(App.el("div", "", "模型未通過驗證，本站不產生推薦名單。"));
-        document.getElementById("content").appendChild(info);
-      }
+      var meta = res.data || {};
+      document.getElementById("content").innerHTML = "";
+      document.getElementById("ranking-section").style.display = "none";
+      document.getElementById("risk-section").style.display = "none";
+      document.getElementById("validation-section").style.display = "none";
+      renderStatus(meta, isArchive, archDate);
+      var valid = renderAlert(meta);
+      renderFooter(meta);
+      if (valid) renderValidation(meta);
+
+      App.fetchJSON(predPath).then(function (pr) {
+        if (!pr.ok || !Array.isArray(pr.data)) {
+          if (valid) showError("預測資料讀取失敗（" + predPath + "）。");
+          return;
+        }
+        if (valid) {
+          renderRanking(pr.data);
+          renderRisk(pr.data);
+        } else {
+          var info = App.el("div", "alert info");
+          info.appendChild(App.el("strong", "", "暫不提供預測排行榜"));
+          info.appendChild(App.el("div", "", "模型未通過驗證，本站不產生推薦名單。"));
+          document.getElementById("content").appendChild(info);
+        }
+      });
     });
-  });
+  }
+
+  // 歷史存檔選單
+  function initArchive() {
+    App.fetchJSON("data/archive/index.json").then(function (res) {
+      if (!res.ok || !Array.isArray(res.data) || !res.data.length) return;
+      var bar = document.getElementById("archive-bar");
+      var sel = document.getElementById("archive-select");
+      sel.innerHTML = "";
+      var opt0 = document.createElement("option");
+      opt0.value = "";
+      opt0.textContent = "最新資料";
+      sel.appendChild(opt0);
+      res.data.forEach(function (e) {
+        if (!e.date) return;
+        var o = document.createElement("option");
+        o.value = e.date;
+        o.textContent = e.date + (e.generated_at ? "（" + App.fmtDateTime(e.generated_at) + " 更新）" : "");
+        sel.appendChild(o);
+      });
+      sel.addEventListener("change", function () {
+        loadDay(sel.value || null);
+      });
+      bar.style.display = "";
+    });
+  }
+
+  loadDay(null);
+  initArchive();
 })();
 </script>
 </body>
