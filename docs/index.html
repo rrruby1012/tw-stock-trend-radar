@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台股趨勢雷達</title>
+<meta name="description" content="台股兩週至一個月趨勢雷達：資料分析、機率預測、回測與虛擬交易。僅供研究與教育用途。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <h1>台股趨勢雷達</h1>
+    <div class="sub">兩週至一個月趨勢機率估計 · 僅供研究與教育用途</div>
+  </header>
+
+  <div id="statusbar" class="statusbar"></div>
+  <div id="alert-zone"></div>
+
+  <div id="content">
+    <div class="loading">載入中…</div>
+  </div>
+
+  <section id="ranking-section" style="display:none">
+    <h2 class="section-title">預測排行榜</h2>
+    <p class="small muted">點選欄位標題可排序；點選列可查看個股詳情。所有機率皆為模型估計值。</p>
+    <div id="ranking-table"></div>
+  </section>
+
+  <section id="risk-section" style="display:none">
+    <h2 class="section-title">風險排行榜（下行風險最小前 10 名）</h2>
+    <p class="small muted">依未來 10 個交易日下行風險估計值由小到大排列。</p>
+    <div id="risk-table"></div>
+  </section>
+
+  <section id="validation-section" style="display:none">
+    <h2 class="section-title">模型驗證摘要</h2>
+    <div id="validation-body"></div>
+  </section>
+
+  <footer class="footer" id="footer" style="display:none">
+    <h3>資料來源</h3>
+    <p id="f-sources"></p>
+    <h3>資料日期</h3>
+    <p id="f-dates"></p>
+    <h3>樣本</h3>
+    <p id="f-sample"></p>
+    <h3>免責聲明</h3>
+    <p id="f-disclaimer"></p>
+  </footer>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function showError(msg) {
+    var c = document.getElementById("content");
+    c.innerHTML = "";
+    var box = App.el("div", "error-box", msg);
+    c.appendChild(box);
+  }
+
+  function renderStatus(meta) {
+    var bar = document.getElementById("statusbar");
+    bar.innerHTML = "";
+    bar.appendChild(App.el("span", "", "最後更新：" + App.fmtDateTime(meta.generated_at)));
+    var day = App.el("span", "badge " + (meta.is_trading_day ? "ok" : "muted"),
+      meta.is_trading_day ? "交易日" : "非交易日");
+    bar.appendChild(day);
+    if (meta.data_delayed) {
+      bar.appendChild(App.el("span", "badge warn", "資料可能延遲（顯示前次正確結果）"));
+    }
+  }
+
+  function renderAlert(meta) {
+    var zone = document.getElementById("alert-zone");
+    zone.innerHTML = "";
+    if (meta.model_valid === false) {
+      var a = App.el("div", "alert danger");
+      a.appendChild(App.el("strong", "", "模型目前不具可靠預測能力"));
+      a.appendChild(App.el("div", "",
+        "樣本外驗證結果未優於基準模型，因此本站不顯示預測排行榜。以下僅提供市場資料與歷史統計，不構成投資建議。"));
+      zone.appendChild(a);
+      return false;
+    }
+    return true;
+  }
+
+  function symCell(row) {
+    var s = App.el("span", "sym", App.text(row.symbol));
+    s.appendChild(App.el("small", "", App.text(row.name)));
+    return s;
+  }
+
+  function renderRanking(preds) {
+    var cols = [
+      { key: "symbol", label: "代號 / 名稱", sortable: true, defaultDir: 1,
+        render: symCell, getValue: function (r) { return r.symbol || ""; } },
+      { key: "close", label: "收盤", sortable: true,
+        render: function (r) { return App.el("span", "num", App.fmtPrice(r.close)); },
+        getValue: function (r) { return r.close; } },
+      { key: "p_up_10", label: "10日上漲機率", sortable: true,
+        render: function (r) { return App.probCell(r.p_up_10); },
+        getValue: function (r) { return r.p_up_10; } },
+      { key: "p_up_20", label: "20日上漲機率", sortable: true,
+        render: function (r) { return App.probCell(r.p_up_20); },
+        getValue: function (r) { return r.p_up_20; } },
+      { key: "p_exc_10", label: "10日跑贏大盤機率", sortable: true,
+        render: function (r) { return App.probCell(r.p_exc_10); },
+        getValue: function (r) { return r.p_exc_10; } },
+      { key: "downside_risk_10", label: "10日下行風險", sortable: true,
+        render: function (r) {
+          var s = App.el("span", "num", App.fmtPct(r.downside_risk_10));
+          s.appendChild(App.estTag());
+          return s;
+        },
+        getValue: function (r) { return r.downside_risk_10; } },
+      { key: "trend", label: "趨勢", sortable: false,
+        render: function (r) { return App.trendBadge(r.trend); } }
+    ];
+    var host = document.getElementById("ranking-table");
+    host.innerHTML = "";
+    host.appendChild(App.buildSortableTable(cols, preds, { key: "p_up_10", dir: -1 }));
+    document.getElementById("ranking-section").style.display = "";
+  }
+
+  function renderRisk(preds) {
+    var top = preds.slice().sort(function (a, b) {
+      var va = App.isValidNumber(a.downside_risk_10) ? a.downside_risk_10 : Infinity;
+      var vb = App.isValidNumber(b.downside_risk_10) ? b.downside_risk_10 : Infinity;
+      return va - vb;
+    }).slice(0, 10);
+    var cols = [
+      { key: "rank", label: "#", sortable: false,
+        render: function (r) { return App.el("span", "num muted", String(r.__rank)); } },
+      { key: "symbol", label: "代號 / 名稱", sortable: false, render: symCell },
+      { key: "downside_risk_10", label: "10日下行風險", sortable: false,
+        render: function (r) {
+          var s = App.el("span", "num", App.fmtPct(r.downside_risk_10));
+          s.appendChild(App.estTag());
+          return s;
+        } },
+      { key: "trend", label: "趨勢", sortable: false,
+        render: function (r) { return App.trendBadge(r.trend); } }
+    ];
+    top.forEach(function (r, i) { r.__rank = i + 1; });
+    var host = document.getElementById("risk-table");
+    host.innerHTML = "";
+    host.appendChild(App.buildSortableTable(cols, top, { key: "rank", dir: 1 }));
+    document.getElementById("risk-section").style.display = "";
+  }
+
+  function renderValidation(meta) {
+    var cred = meta.credibility || {};
+    var body = document.getElementById("validation-body");
+    body.innerHTML = "";
+    var card = App.el("div", "card");
+    card.appendChild(App.el("h3", "", "樣本外驗證（walk-forward）"));
+    card.appendChild(App.kvRow("驗證目標", App.text(cred.target)));
+    card.appendChild(App.kvRow("樣本外樣本數", App.isValidNumber(cred.oos_n) ? Number(cred.oos_n).toLocaleString("zh-TW") : App.NO_DATA));
+    card.appendChild(App.kvRow("AUC（模型 / 基準）",
+      App.isValidNumber(cred.auc) ? cred.auc.toFixed(3) + " / " + (App.isValidNumber(cred.auc_baseline) ? cred.auc_baseline.toFixed(3) : App.NO_DATA) : App.NO_DATA));
+    card.appendChild(App.kvRow("Brier score（模型 / 基準）",
+      App.isValidNumber(cred.brier) ? cred.brier.toFixed(4) + " / " + (App.isValidNumber(cred.brier_baseline) ? cred.brier_baseline.toFixed(4) : App.NO_DATA) : App.NO_DATA));
+    card.appendChild(App.el("p", "small muted",
+      "模型僅在樣本外表現優於基準時才會被標示為可信；詳細各期指標請見 validation.json。"));
+    body.appendChild(card);
+    document.getElementById("validation-section").style.display = "";
+  }
+
+  function renderFooter(meta) {
+    var f = document.getElementById("footer");
+    var src = (meta.sources || []).join("、") || App.NO_DATA;
+    document.getElementById("f-sources").textContent = src;
+    var dd = meta.data_dates || {};
+    var parts = [];
+    [["price", "股價"], ["institutional", "三大法人"], ["margin", "融資融券"], ["revenue", "月營收"], ["financials", "財報"]].forEach(function (p) {
+      parts.push(p[1] + "：" + App.fmtDate(dd[p[0]]));
+    });
+    document.getElementById("f-dates").textContent = parts.join("；");
+    var u = meta.universe || {};
+    var cred = meta.credibility || {};
+    document.getElementById("f-sample").textContent =
+      "納入 " + App.text(u.included) + " 檔、排除 " + App.text(u.excluded) + " 檔；" +
+      "樣本外驗證樣本數 " + (App.isValidNumber(cred.oos_n) ? Number(cred.oos_n).toLocaleString("zh-TW") : App.NO_DATA) + "。";
+    document.getElementById("f-disclaimer").textContent = App.text(meta.risk_disclaimer);
+    f.style.display = "";
+  }
+
+  // 主流程
+  App.fetchJSON("data/meta.json").then(function (res) {
+    if (!res.ok) {
+      showError("資料尚未產生（data/meta.json 讀取失敗）。請等待自動更新完成後再試。");
+      return;
+    }
+    var meta = res.data || {};
+    document.getElementById("content").innerHTML = "";
+    renderStatus(meta);
+    var valid = renderAlert(meta);
+    renderFooter(meta);
+    if (valid) renderValidation(meta);
+
+    App.fetchJSON("data/predictions.json").then(function (pr) {
+      if (!pr.ok || !Array.isArray(pr.data)) {
+        if (valid) showError("預測資料讀取失敗（data/predictions.json）。");
+        return;
+      }
+      if (valid) {
+        renderRanking(pr.data);
+        renderRisk(pr.data);
+      } else {
+        var info = App.el("div", "alert info");
+        info.appendChild(App.el("strong", "", "暫不提供預測排行榜"));
+        info.appendChild(App.el("div", "", "模型未通過驗證，本站不產生推薦名單。"));
+        document.getElementById("content").appendChild(info);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
