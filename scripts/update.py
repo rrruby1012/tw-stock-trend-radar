@@ -176,6 +176,7 @@ def main() -> int:
     proba_series, max_pred_date = train_final_and_predict(panel, feature_cols, cfg)
 
     # 9. 產生網站
+    up10m = val_results["targets"]["up_10"]["metrics"]
     meta = {
         "generated_at": pd.Timestamp.now(tz="Asia/Taipei").isoformat(),
         "data_dates": {
@@ -192,6 +193,15 @@ def main() -> int:
         "model_valid": bool(credible),
         "validation_status": val_status,
         "credibility_reasons": reasons,
+        # 前端「模型驗證摘要」與頁尾樣本數讀取此欄位（缺值時前端顯示「資料暫無」）
+        "credibility": {
+            "target": "up_10",
+            "oos_n": up10m.get("n"),
+            "auc": up10m.get("auc"),
+            "auc_baseline": up10m.get("auc_always"),
+            "brier": up10m.get("brier"),
+            "brier_baseline": up10m.get("brier_always"),
+        },
         "risk_disclaimer": cfg["site"]["risk_disclaimer"],
         "is_trading_day": True,
         "data_delayed": bool(fetched.get("warnings")),
@@ -208,6 +218,53 @@ def main() -> int:
         output_dir=docs_dir,
     )
     log.info("網站已產生至 %s", docs_dir)
+
+    # 9b. 覆核：納入名單的每檔都必須有預測與歷史檔，否則列為排除並寫明原因
+    # （不可靜默遺漏，避免網站顯示「排除 0」卻實際缺檔）
+    preds_path = docs_dir / "data" / "predictions.json"
+    preds = json.loads(preds_path.read_text(encoding="utf-8"))
+    pred_symbols = {str(p.get("symbol")) for p in preds}
+    name_map = dict(zip(included["symbol"].astype(str), included["name"]))
+    missing = [s for s in inc_symbols if str(s) not in pred_symbols]
+    hist_missing = [
+        s for s in inc_symbols
+        if not (docs_dir / "data" / f"history_{s}.json").exists()
+    ]
+    extra_excluded = []
+    for s in sorted(set(missing) | set(hist_missing)):
+        why = []
+        if str(s) in map(str, missing):
+            why.append("未產生預測資料")
+        if s in hist_missing:
+            why.append("未產生個股歷史檔")
+        extra_excluded.append({
+            "symbol": str(s),
+            "name": name_map.get(str(s), str(s)),
+            "排除原因": "；".join(why) + "（待查）",
+            "資料天數": None,
+        })
+        log.warning("覆核發現 %s 缺檔：%s", s, "；".join(why))
+    if extra_excluded:
+        meta_path = docs_dir / "data" / "meta.json"
+        meta_disk = json.loads(meta_path.read_text(encoding="utf-8"))
+        meta_disk["excluded"] = list(meta_disk.get("excluded") or []) + extra_excluded
+        meta_disk["universe"] = {
+            "included": len(pred_symbols),
+            "excluded": len(meta_disk["excluded"]),
+        }
+        meta_path.write_text(
+            json.dumps(meta_disk, ensure_ascii=False, default=str), encoding="utf-8"
+        )
+        # 同步當日存檔的 meta（若已產生）
+        arch_date = (meta_disk.get("data_dates") or {}).get("price")
+        if arch_date:
+            arch_meta = docs_dir / "data" / "archive" / f"meta_{arch_date}.json"
+            if arch_meta.exists():
+                arch_meta.write_text(
+                    json.dumps(meta_disk, ensure_ascii=False, default=str),
+                    encoding="utf-8",
+                )
+        log.info("已將 %d 檔缺檔股票列為排除", len(extra_excluded))
 
     # 10. 摘要
     up10 = val_results["targets"]["up_10"]["metrics"]
