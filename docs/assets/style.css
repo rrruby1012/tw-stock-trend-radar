@@ -1,0 +1,335 @@
+/* 台股趨勢雷達 - 手機優先深色金融風格 */
+:root {
+  --bg: #0b0f1a;
+  --surface: #141b2d;
+  --surface-2: #1a2338;
+  --border: #26314d;
+  --text: #e8edf7;
+  --muted: #8b96b3;
+  --up: #e5484d;      /* 台股慣例：漲=紅 */
+  --down: #3dd68c;    /* 台股慣例：跌=綠 */
+  --accent: #4f7cff;
+  --warn: #f5a524;
+  --danger-bg: #3d1420;
+  --radius: 12px;
+  --tap: 44px;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+a { color: var(--accent); }
+
+/* ---------- 版面 ---------- */
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 12px 48px;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(11, 15, 26, 0.96);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
+  margin: 0 -12px 16px;
+}
+
+.topbar h1 {
+  font-size: 1.25rem;
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.topbar .sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.backlink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-size: 1rem;
+  text-decoration: none;
+  margin-bottom: 4px;
+}
+
+/* ---------- 狀態列 / 警示 ---------- */
+.statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.badge.ok { border-color: var(--down); color: var(--down); }
+.badge.warn { border-color: var(--warn); color: var(--warn); }
+.badge.muted { color: var(--muted); }
+
+.alert {
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin: 16px 0;
+  font-size: 0.95rem;
+}
+
+.alert.danger {
+  background: var(--danger-bg);
+  border: 1px solid var(--up);
+}
+
+.alert.warn {
+  background: #2e2410;
+  border: 1px solid var(--warn);
+}
+
+.alert.info {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.alert strong { display: block; font-size: 1.05rem; margin-bottom: 4px; }
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+
+.card h2, .card h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  margin: 24px 0 8px;
+  padding-left: 10px;
+  border-left: 4px solid var(--accent);
+}
+
+/* ---------- 表格（可橫向捲動） ---------- */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin: 8px 0 16px;
+}
+
+table.rank {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 640px;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+table.rank thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-align: right;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+table.rank thead th:first-child,
+table.rank tbody td:first-child { text-align: left; }
+
+table.rank thead th.sortable {
+  cursor: pointer;
+  min-height: var(--tap);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+table.rank thead th.sortable:active { color: var(--text); }
+
+table.rank tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+table.rank tbody tr:last-child td { border-bottom: none; }
+
+table.rank tbody tr { cursor: pointer; }
+table.rank tbody tr:active { background: var(--surface-2); }
+
+.sym { font-weight: 700; }
+.sym small { display: block; font-weight: 400; color: var(--muted); font-size: 0.78rem; }
+
+.sort-ind { color: var(--accent); font-size: 0.75rem; margin-left: 2px; }
+
+.est-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* ---------- 趨勢徽章 ---------- */
+.trend {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.trend.bull { background: rgba(229, 72, 77, 0.15); color: var(--up); border: 1px solid var(--up); }
+.trend.flat { background: rgba(139, 150, 179, 0.12); color: var(--muted); border: 1px solid var(--muted); }
+.trend.bear { background: rgba(61, 214, 140, 0.12); color: var(--down); border: 1px solid var(--down); }
+
+/* ---------- 機率條 ---------- */
+.prob-row { margin: 10px 0; }
+.prob-row .label { font-size: 0.9rem; margin-bottom: 4px; }
+.prob-row .value { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.prob-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.prob-bar > div {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), #7aa2ff);
+}
+
+/* ---------- 圖表 ---------- */
+.chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 4px 4px;
+  margin: 8px 0 16px;
+  position: relative;
+}
+.chart-wrap svg { display: block; width: 100%; height: auto; touch-action: none; }
+.chart-tip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(20, 27, 45, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  display: none;
+  white-space: nowrap;
+  z-index: 5;
+}
+
+/* ---------- 訊號清單 ---------- */
+.sig-list { margin: 6px 0; padding-left: 20px; font-size: 0.92rem; }
+.sig-list li { margin: 4px 0; }
+.sig-list.bull li::marker { color: var(--up); }
+.sig-list.bear li::marker { color: var(--down); }
+
+/* ---------- 預測紀錄 ---------- */
+.hist-list { list-style: none; margin: 0; padding: 0; font-size: 0.88rem; }
+.hist-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.hist-list li:last-child { border-bottom: none; }
+.hit { color: var(--up); font-weight: 700; }
+.miss { color: var(--down); font-weight: 700; }
+.pending { color: var(--muted); }
+
+/* ---------- 頁尾 ---------- */
+.footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.footer h3 { font-size: 0.9rem; color: var(--text); margin: 12px 0 4px; }
+.footer p { margin: 4px 0; }
+
+/* ---------- 通用 ---------- */
+.muted { color: var(--muted); }
+.small { font-size: 0.82rem; }
+.num { font-variant-numeric: tabular-nums; }
+.positive { color: var(--up); }
+.negative { color: var(--down); }
+.center { text-align: center; }
+.mt { margin-top: 16px; }
+
+.loading, .error-box {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--muted);
+}
+
+.kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 0.92rem; }
+.kv:last-child { border-bottom: none; }
+.kv .k { color: var(--muted); }
+.kv .v { text-align: right; font-variant-numeric: tabular-nums; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+/* ---------- 桌機增強 ---------- */
+@media (min-width: 720px) {
+  body { font-size: 17px; }
+  .page { padding: 0 24px 64px; }
+  .topbar { margin: 0 -24px 20px; padding: 14px 24px; }
+  .topbar h1 { font-size: 1.5rem; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  table.rank tbody tr:hover { background: var(--surface-2); }
+}
