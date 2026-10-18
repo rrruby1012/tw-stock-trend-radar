@@ -1,0 +1,105 @@
+# ============================================================
+# 台股兩週至一個月趨勢雷達 - 中央參數設定
+# 所有模型、回測、費用參數集中於此，避免散落程式碼中
+# ============================================================
+
+project:
+  name: "台股兩週至一個月趨勢雷達"
+  version: "0.1.0"
+  timezone: "Asia/Taipei"
+
+# ---------- 預測目標 ----------
+horizons:
+  days: [10, 20]          # 預測 10 / 20 個交易日
+  excess_benchmark: "TAIEX"  # 跑贏大盤的比較基準（加權指數）
+
+# ---------- 資料 ----------
+data:
+  sources_priority: ["twse", "tpex", "finmind"]  # 優先順序（詳見 README 資料來源章節）
+  finmind_token_env: "FINMIND_TOKEN"              # token 只從環境變數讀取，絕不寫入 repo
+  history_years: 5                                # 至少 5 年日資料
+  min_history_days: 500                           # 單檔股票最少交易日數，否則排除
+  max_missing_ratio: 0.05                         # 缺資料比例上限，超過則排除該股票
+  min_avg_turnover: 5000000                       # 近60日平均成交金額下限（新台幣元），過低視為流動性不足
+  cache_dir: "data/cache"
+  request_timeout_sec: 30
+  max_retries: 3
+  retry_backoff_sec: 5
+
+# 台灣50成分股來源（若無法可靠取得，改用 watchlist.csv）
+universe:
+  source: "watchlist.csv"   # 第一版：以 watchlist.csv 為準，成分股抓取為輔
+  fallback_note: "若 TWSE 成分股名單無法可靠取得，以 watchlist.csv 為準"
+
+# ---------- 特徵 ----------
+features:
+  return_windows: [5, 10, 20, 60, 120]
+  ma_windows: [5, 10, 20, 60, 120]
+  volume_windows: [5, 20, 60]
+  volatility_windows: [20, 60]
+  rsi_window: 14
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  # 財報/月營收：必須依公告日對齊（point-in-time），由 features.py 保證
+  use_monthly_revenue: true
+  use_financial_statements: true
+  use_institutional_flow: true   # 外資/投信/自營商買賣超
+  use_margin: true               # 融資融券變化
+
+# ---------- 回測交易成本（台股）----------
+costs:
+  commission_rate: 0.001425     # 手續費 0.1425%
+  commission_discount: 0.6      # 常見折扣（6折），可調整；設 1.0 = 無折扣
+  commission_min_ntd: 20        # 最低手續費 20 元
+  securities_tax_rate: 0.003    # 證券交易稅 0.3%（賣出時）
+  slippage_bps: 10              # 合理滑價 10 bps（買賣各一次）
+
+# ---------- 模型與驗證 ----------
+model:
+  # 基準模型
+  baselines:
+    - "always_up"      # 全部猜上漲（以歷史上漲比例為機率）
+    - "buy_hold_index" # 持有大盤
+    - "momentum_rule"  # 簡單動能規則：20日報酬>0 則預測上漲
+  # ML 模型（可解釋）
+  estimator: "logistic_regression"
+  logistic_regression:
+    C: 1.0
+    max_iter: 1000
+    class_weight: "balanced"
+  # 時間序列 walk-forward 驗證
+  validation:
+    method: "walk_forward"
+    min_train_days: 500        # 最少訓練 500 個交易日（約2年）
+    refit_every_days: 63       # 每季（63交易日）重訓一次
+    embargo_days: 20           # 訓練/測試間隔離，避免標籤重疊洩漏
+    n_splits_min: 8
+  # 機率校準
+  calibration:
+    method: "isotonic"         # isotonic / sigmoid
+    min_calibration_samples: 200
+
+# 模型可信度門檻：樣本外必須優於基準才顯示為可信預測
+credibility:
+  min_auc_improvement: 0.02     # AUC 至少優於基準 0.02
+  min_brier_improvement: 0.005 # Brier score 至少優於基準 0.005
+  min_oos_samples: 500         # 樣本外至少 500 個樣本
+
+# ---------- 趨勢判定 ----------
+trend:
+  bullish_threshold: 0.58      # 10日與20日上漲機率加權 >= 此值 → 偏多
+  bearish_threshold: 0.42      # <= 此值 → 偏空，其餘為盤整
+
+# ---------- 網站 ----------
+site:
+  output_dir: "docs"
+  title: "台股趨勢雷達"
+  language: "zh-TW"
+  risk_disclaimer: "本工具僅供研究與教育用途，不構成投資建議。所有機率皆為模型估計值，過去績效不代表未來結果。投資有風險，入市需謹慎。"
+
+# ---------- 自動更新 ----------
+schedule:
+  # 每週一至週五 台灣時間 18:30；cron 以 UTC 表示
+  cron_utc: "30 10 * * 1-5"
+  retain_previous_on_failure: true  # API 失敗時保留前次正確結果
