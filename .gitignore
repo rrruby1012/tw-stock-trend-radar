@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 資料（原始快取不進版控，僅保留小體積產出）
+data/raw/
+data/cache/
+*.parquet
+*.feather
+
+# 環境與秘密（絕對不得提交）
+.env
+*.pem
+*.key
+
+# 測試與覆蓋率
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 系統
+.DS_Store
+Thumbs.db
+
+# 本地工具
+.tox/
