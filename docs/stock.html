@@ -32,6 +32,8 @@
   "use strict";
 
   var symbol = App.getQueryParam("symbol");
+  var archDate = App.getQueryParam("date");
+  var isArchive = !!archDate;
 
   function showError(msg) {
     var c = document.getElementById("content");
@@ -55,7 +57,13 @@
     document.getElementById("stock-title").textContent =
       App.text(p.symbol) + " " + App.text(p.name);
     document.getElementById("stock-sub").textContent =
-      "資料日期：" + App.fmtDate(p.price_date);
+      "資料日期：" + App.fmtDate(p.price_date) + (isArchive ? "（歷史存檔：" + App.fmtDate(archDate) + "）" : "");
+
+    // 返回首頁時保留歷史日期
+    if (isArchive) {
+      var back = document.querySelector(".backlink");
+      if (back) back.href = "index.html?date=" + encodeURIComponent(archDate);
+    }
 
     var c = card();
     var priceLine = App.el("div", "", "");
@@ -189,21 +197,48 @@
     return;
   }
 
-  App.fetchJSON("data/meta.json").then(function (mr) {
+  // 歷史存檔模式：讀取該日期的快照，並將圖表/紀錄截斷至該日期
+  var metaPath = isArchive ? "data/archive/meta_" + archDate + ".json" : "data/meta.json";
+  var predPath = isArchive ? "data/archive/predictions_" + archDate + ".json" : "data/predictions.json";
+
+  function filterHistToDate(hist) {
+    if (!isArchive || !hist) return hist;
+    var out = { symbol: hist.symbol, name: hist.name, prices: [], predictions: [] };
+    (hist.prices || []).forEach(function (r) {
+      if (String(r[0]).slice(0, 10) <= archDate) out.prices.push(r);
+    });
+    (hist.predictions || []).forEach(function (r) {
+      if (String(r[0]).slice(0, 10) <= archDate) out.predictions.push(r);
+    });
+    return out;
+  }
+
+  App.fetchJSON(metaPath).then(function (mr) {
     var meta = (mr.ok && mr.data) || {};
     document.getElementById("f-disclaimer").textContent = App.text(meta.risk_disclaimer);
     document.getElementById("footer").style.display = "";
+    var zone = document.getElementById("alert-zone");
+    if (isArchive) {
+      var nb = App.el("div", "alert info");
+      nb.appendChild(App.el("strong", "", "歷史存檔：" + App.fmtDate(archDate)));
+      nb.appendChild(App.el("div", "", "以下為該日期的預測快照；價格走勢與預測紀錄已截斷至該日期。"));
+      zone.appendChild(nb);
+    }
     if (meta.model_valid === false) {
-      var zone = document.getElementById("alert-zone");
       var a = App.el("div", "alert danger");
-      a.appendChild(App.el("strong", "", "模型目前不具可靠預測能力"));
-      a.appendChild(App.el("div", "", "以下機率僅為未通過驗證的模型輸出，請勿作為決策依據。"));
+      if (meta.validation_status === "insufficient") {
+        a.appendChild(App.el("strong", "", "尚無足夠驗證資料"));
+        a.appendChild(App.el("div", "", "樣本外驗證尚未執行或資料不足，無法評估模型預測能力，以下機率請勿作為決策依據。"));
+      } else {
+        a.appendChild(App.el("strong", "", "模型目前不具可靠預測能力"));
+        a.appendChild(App.el("div", "", "以下機率僅為未通過驗證的模型輸出，請勿作為決策依據。"));
+      }
       zone.appendChild(a);
     }
 
-    App.fetchJSON("data/predictions.json").then(function (pr) {
+    App.fetchJSON(predPath).then(function (pr) {
       if (!pr.ok || !Array.isArray(pr.data)) {
-        showError("預測資料讀取失敗（data/predictions.json）。");
+        showError("預測資料讀取失敗（" + predPath + "）。");
         return;
       }
       var p = null;
@@ -211,7 +246,7 @@
         if (String(row.symbol) === String(symbol)) p = row;
       });
       if (!p) {
-        showError("找不到代號 " + symbol + " 的資料（可能已排除或資料不足）。");
+        showError("找不到代號 " + symbol + " 在 " + (isArchive ? archDate : "最新") + " 資料中的紀錄。");
         return;
       }
       document.getElementById("content").innerHTML = "";
@@ -221,7 +256,7 @@
       renderSignals(p);
 
       App.fetchJSON("data/history_" + encodeURIComponent(symbol) + ".json").then(function (hr) {
-        var hist = (hr.ok && hr.data) || null;
+        var hist = filterHistToDate((hr.ok && hr.data) || null);
         renderChart(hist);
         renderHistory(p, hist);
       });
