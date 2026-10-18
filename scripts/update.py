@@ -162,8 +162,8 @@ def main() -> int:
     from src.validation import credibility_check, walk_forward
 
     val_results = walk_forward(panel, feature_cols, cfg)
-    credible, reasons = credibility_check(val_results, cfg)
-    log.info("模型可信度：%s（%s）", credible, "; ".join(reasons))
+    credible, reasons, val_status = credibility_check(val_results, cfg)
+    log.info("模型可信度：%s（%s）[%s]", credible, "; ".join(reasons), val_status)
 
     # 7. 回測
     from src.backtest import run_backtest
@@ -190,6 +190,7 @@ def main() -> int:
         "universe": {"included": len(included), "excluded": len(excluded)},
         "excluded": excluded.to_dict(orient="records") if not excluded.empty else [],
         "model_valid": bool(credible),
+        "validation_status": val_status,
         "credibility_reasons": reasons,
         "risk_disclaimer": cfg["site"]["risk_disclaimer"],
         "is_trading_day": True,
