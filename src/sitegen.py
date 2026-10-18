@@ -198,3 +198,31 @@ def generate_site(
         json.dumps(meta, ensure_ascii=False, default=str), encoding="utf-8"
     )
     log.info("產生 %d 檔預測、%d 個歷史檔", len(predictions), len(predictions))
+
+    # ---------- 每日預測存檔（供歷史回看） ----------
+    archive_dir = data_dir / "archive"
+    archive_dir.mkdir(exist_ok=True)
+    arch_date = (meta.get("data_dates") or {}).get("price") or pd.Timestamp.now(tz="Asia/Taipei").strftime("%Y-%m-%d")
+    (archive_dir / f"predictions_{arch_date}.json").write_text(
+        json.dumps(predictions, ensure_ascii=False), encoding="utf-8"
+    )
+    (archive_dir / f"meta_{arch_date}.json").write_text(
+        json.dumps(meta, ensure_ascii=False, default=str), encoding="utf-8"
+    )
+    # 存檔索引（只保留最近 90 天）
+    index_path = archive_dir / "index.json"
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8")) if index_path.exists() else []
+    except Exception:  # noqa: BLE001
+        index = []
+    if not any(e.get("date") == arch_date for e in index):
+        index.append({"date": arch_date, "generated_at": meta.get("generated_at")})
+    index = sorted(index, key=lambda e: e.get("date", ""), reverse=True)[:90]
+    # 清掉超過 90 天的舊檔
+    keep_dates = {e["date"] for e in index}
+    for old in list(archive_dir.glob("predictions_*.json")) + list(archive_dir.glob("meta_*.json")):
+        stem_date = old.stem.rsplit("_", 1)[-1]
+        if stem_date not in keep_dates:
+            old.unlink(missing_ok=True)
+    index_path.write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
+    log.info("已寫入 %s 的預測存檔（共 %d 天）", arch_date, len(index))
