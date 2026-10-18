@@ -214,9 +214,22 @@
     document.getElementById("f-dates").textContent = parts.join("；");
     var u = meta.universe || {};
     var cred = meta.credibility || {};
-    document.getElementById("f-sample").textContent =
+    var sampleEl = document.getElementById("f-sample");
+    sampleEl.textContent =
       "納入 " + App.text(u.included) + " 檔、排除 " + App.text(u.excluded) + " 檔；" +
       "樣本外驗證樣本數 " + (App.isValidNumber(cred.oos_n) ? Number(cred.oos_n).toLocaleString("zh-TW") : App.NO_DATA) + "。";
+    // 排除名單（含原因）：有排除時必須列出，不可只顯示數字
+    var excl = meta.excluded || [];
+    if (excl.length) {
+      var ul = App.el("ul", "excluded-list");
+      excl.forEach(function (e) {
+        var li = App.el("li", "");
+        li.appendChild(App.el("span", "sym", App.text(e.symbol) + " " + App.text(e.name || "")));
+        li.appendChild(App.el("span", "muted small", " — " + App.text(e["排除原因"] || e.reason || "")));
+        ul.appendChild(li);
+      });
+      sampleEl.appendChild(ul);
+    }
     document.getElementById("f-disclaimer").textContent = App.text(meta.risk_disclaimer);
     f.style.display = "";
   }
