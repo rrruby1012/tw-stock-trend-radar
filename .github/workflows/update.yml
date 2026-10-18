@@ -1,0 +1,59 @@
+# 台股趨勢雷達：每週一至週五台灣時間 18:30 自動更新並部署 GitHub Pages
+#
+# Secrets（選填）：
+#   FINMIND_TOKEN - FinMind API token（免費註冊即可申請；未設定時以匿名模式執行，上限較低）
+#   設定位置：GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+#
+# GitHub Pages 設定（只需做一次）：
+#   repo → Settings → Pages → Build and deployment → Deploy from a branch
+#   → Branch 選 main、資料夾選 /docs → Save
+
+name: 更新趨勢雷達
+
+on:
+  schedule:
+    # 每週一至週五 10:30 UTC = 台灣時間 18:30（UTC+8）
+    - cron: "30 10 * * 1-5"
+  workflow_dispatch:  # 允許手動執行
+
+concurrency:
+  group: trend-radar-update
+  cancel-in-progress: false
+
+permissions:
+  contents: write  # 需要推送更新後的 docs/
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 取出程式碼
+        uses: actions/checkout@v4
+
+      - name: 設定 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 安裝依賴
+        run: pip install -r requirements.txt
+
+      - name: 執行更新
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+          TZ: Asia/Taipei
+        run: python scripts/update.py
+
+      - name: 提交網站更新
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          if git diff --cached --quiet; then
+            echo "無變更（可能為非交易日或資料未更新），略過提交。"
+          else
+            git commit -m "chore: 自動更新趨勢雷達網站 $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
