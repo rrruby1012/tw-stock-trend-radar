@@ -63,29 +63,33 @@ def test_credibility_check_隨機水準回傳False並附原因(small_cfg):
     """模型與基準無異時，必須判為不可信並說明原因。"""
     results = _fake_results(n=10000, auc=0.501, auc_base=0.500,
                             brier=0.2500, brier_always=0.2499)
-    ok, reasons = credibility_check(results, small_cfg)
+    ok, reasons, status = credibility_check(results, small_cfg)
     assert ok is False
     assert len(reasons) > 0
     assert any("AUC" in r for r in reasons)
+    assert status == "failed"  # 驗證有執行、資料充足，只是未優於基準
 
 
 def test_credibility_check_明顯優於基準時回傳True(small_cfg):
     """此測試僅驗證門檻邏輯方向正確（非宣稱作弊特徵可用）。"""
     results = _fake_results(n=10000, auc=0.75, auc_base=0.50,
                             brier=0.18, brier_always=0.25)
-    ok, reasons = credibility_check(results, small_cfg)
+    ok, reasons, status = credibility_check(results, small_cfg)
     assert ok is True
     assert len(reasons) > 0
+    assert status == "ok"
 
 
 def test_credibility_check_樣本不足回傳False(small_cfg):
     results = _fake_results(n=50, auc=0.80, auc_base=0.50,
                             brier=0.15, brier_always=0.25)
-    ok, reasons = credibility_check(results, small_cfg)
+    ok, reasons, status = credibility_check(results, small_cfg)
     assert ok is False
     assert any("樣本" in r for r in reasons)
+    assert status == "insufficient"  # 資料不足，不得寫成「未優於基準」
 
 
 def test_credibility_check_缺up_10結果回傳False(small_cfg):
-    ok, reasons = credibility_check({"targets": {}}, small_cfg)
+    ok, reasons, status = credibility_check({"targets": {}}, small_cfg)
     assert ok is False
+    assert status == "insufficient"
