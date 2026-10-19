@@ -179,6 +179,9 @@ class FinMindClient:
         ratios.loc[mask] = cum.values[pos[mask]]
 
         adj = price.copy()
+        # 保留官方原始收盤價供網站顯示；還原價只供模型計算
+        if "close" in price.columns:
+            adj["close_raw"] = price["close"]
         for col in ["open", "high", "low", "close", "amount"]:
             if col in adj.columns:
                 adj[col] = adj[col] * ratios.values
