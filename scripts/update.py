@@ -54,6 +54,12 @@ def train_final_and_predict(panel: pd.DataFrame, feature_cols: list[str], cfg: d
     """在全量資料上訓練最終模型（留 embargo），預測每個股票最新一列。"""
     from src.models import TARGETS, CalibratedModel, LogisticModel
 
+    # 防禦：排除標籤欄（避免目標洩漏；與 validation.walk_forward 一致）
+    label_cols = set(TARGETS) | {"fwd_ret_10", "fwd_ret_20"}
+    feature_cols = [c for c in feature_cols if c not in label_cols and c in panel.columns]
+    if not feature_cols:
+        raise ValueError("沒有可用的特徵欄位。")
+
     vcfg = cfg["model"]["validation"]
     embargo = vcfg.get("embargo_days", 20)
     lr_cfg = cfg["model"]["logistic_regression"]
