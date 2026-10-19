@@ -70,9 +70,9 @@
     var pv = App.el("span", "num", "");
     pv.style.fontSize = "1.8rem";
     pv.style.fontWeight = "800";
-    pv.textContent = App.fmtPrice(p.close);
+    pv.textContent = App.fmtPrice(p.close_raw != null ? p.close_raw : p.close);
     priceLine.appendChild(pv);
-    priceLine.appendChild(App.el("span", "muted small", "  最新收盤價（" + App.fmtDate(p.price_date) + "）"));
+    priceLine.appendChild(App.el("span", "muted small", "  最新收盤價（官方原始，" + App.fmtDate(p.price_date) + "）"));
     c.appendChild(priceLine);
 
     var badges = App.el("div", "statusbar");
@@ -97,15 +97,43 @@
   }
 
   function renderProbs(p) {
+    // 只顯示實際存在的機率欄位；全無則隱藏整個區塊
+    var rows = [
+      ["10 個交易日後上漲機率", p.p_up_10],
+      ["20 個交易日後上漲機率", p.p_up_20],
+      ["10 個交易日後跑贏加權指數機率", p.p_exc_10],
+      ["20 個交易日後跑贏加權指數機率", p.p_exc_20],
+    ].filter(function (r) { return App.isValidNumber(r[1]); });
+    if (!rows.length) return;
     section("機率估計");
     var c = card();
-    c.appendChild(App.probRow("10 個交易日後上漲機率", p.p_up_10));
-    c.appendChild(App.probRow("20 個交易日後上漲機率", p.p_up_20));
-    c.appendChild(App.probRow("10 個交易日後跑贏加權指數機率", p.p_exc_10));
-    c.appendChild(App.probRow("20 個交易日後跑贏加權指數機率", p.p_exc_20));
+    rows.forEach(function (r) { c.appendChild(App.probRow(r[0], r[1])); });
+  }
+
+  function renderActual(p) {
+    // 實際結果：有 actual_up_10 顯示漲跌/報酬/命中，否則顯示待驗證
+    if (p.actual_up_10 === undefined && p.actual_ret_10 === undefined) return;
+    section("實際結果（10 個交易日後）");
+    var c = card();
+    if (p.actual_up_10 === null || p.actual_up_10 === undefined) {
+      c.appendChild(App.el("p", "muted", "待驗證：10 個交易日尚未結束，實際結果未產生。"));
+      return;
+    }
+    var actualTxt = p.actual_up_10 ? "上漲" : "下跌";
+    c.appendChild(App.kvRow("實際漲跌", App.el("span", p.actual_up_10 ? "bull" : "bear", actualTxt)));
+    if (App.isValidNumber(p.actual_ret_10)) {
+      c.appendChild(App.kvRow("實際報酬率", App.el("span", "num", App.fmtPct(p.actual_ret_10))));
+    }
+    if (App.isValidNumber(p.p_up_10)) {
+      var hit = (p.p_up_10 >= 0.5) === !!p.actual_up_10;
+      c.appendChild(App.kvRow("預測是否命中",
+        App.el("span", "badge " + (hit ? "ok" : "warn"), hit ? "✓ 命中" : "✗ 未命中")));
+    }
   }
 
   function renderInterval(p) {
+    // 區間資料不存在時隱藏整個區塊
+    if (!p.interval_10 && !p.interval_20) return;
     section("預估價格區間與下行風險");
     var c = card();
     function iv(label, ivObj, risk) {
@@ -136,14 +164,24 @@
   }
 
   function renderSignals(p) {
+    // 無訊號資料時隱藏整個區塊
+    var hasBull = p.bull_signals && p.bull_signals.length;
+    var hasBear = p.bear_signals && p.bear_signals.length;
+    if (!hasBull && !hasBear && !p.invalidation) return;
     section("訊號與判斷條件");
     var c = card();
-    c.appendChild(App.el("h3", "", "主要有利訊號"));
-    c.appendChild(App.sigList(p.bull_signals, "bull"));
-    c.appendChild(App.el("h3", "mt", "主要風險訊號"));
-    c.appendChild(App.sigList(p.bear_signals, "bear"));
-    c.appendChild(App.el("h3", "mt", "判斷失效條件"));
-    c.appendChild(App.el("p", "", App.text(p.invalidation)));
+    if (hasBull) {
+      c.appendChild(App.el("h3", "", "主要有利訊號"));
+      c.appendChild(App.sigList(p.bull_signals, "bull"));
+    }
+    if (hasBear) {
+      c.appendChild(App.el("h3", "mt", "主要風險訊號"));
+      c.appendChild(App.sigList(p.bear_signals, "bear"));
+    }
+    if (p.invalidation) {
+      c.appendChild(App.el("h3", "mt", "判斷失效條件"));
+      c.appendChild(App.el("p", "", App.text(p.invalidation)));
+    }
   }
 
   function renderChart(hist) {
@@ -252,6 +290,7 @@
       document.getElementById("content").innerHTML = "";
       renderHeader(p, meta);
       renderProbs(p);
+      renderActual(p);
       renderInterval(p);
       renderSignals(p);
 
