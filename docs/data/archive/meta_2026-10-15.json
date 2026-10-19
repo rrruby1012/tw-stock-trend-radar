@@ -1,0 +1,1 @@
+{"generated_at": "2026-10-15T18:30:00+08:00", "price_date": "2026-10-15", "universe": {"included": 50, "excluded": 0}, "model_valid": false, "validation_status": "failed", "reconstructed": true, "note": "由當日重訓模型重建；actual_up_10 為 null 表示 10 日結果尚未產生（待驗證）。", "risk_disclaimer": "本網站僅供研究參考，不構成投資建議。模型目前不具可靠預測能力。"}
