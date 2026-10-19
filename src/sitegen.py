@@ -129,10 +129,13 @@ def generate_site(
         )
         mdd = _max_drawdown(sub["close"].tail(250))
 
+        # 顯示用官方原始收盤價；還原價只供模型計算
+        close_raw = float(latest["close_raw"]) if "close_raw" in latest and pd.notna(latest["close_raw"]) else close
         predictions.append({
             "symbol": sid,
             "name": name_map.get(sid, sid),
             "close": round(close, 2),
+            "close_raw": round(close_raw, 2),
             "price_date": price_date,
             "p_up_10": _r(p.get("up_10")),
             "p_up_20": _r(p.get("up_20")),
@@ -153,10 +156,11 @@ def generate_site(
             "price_warning": None,
         })
 
-        # 個股歷史檔
+        # 個股歷史檔（顯示用原始收盤價）
+        close_raw_s = sub["close_raw"] if "close_raw" in sub.columns else sub["close"]
         hist_prices = [
             [d.strftime("%Y-%m-%d"), round(float(c), 2), int(v)]
-            for d, c, v in zip(sub.index, sub["close"], sub["volume"])
+            for d, c, v in zip(sub.index, close_raw_s, sub["volume"])
         ][-260:]
         pred_hist = []
         if not oos_s.empty and "date" in oos_s.columns:
