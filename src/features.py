@@ -248,6 +248,21 @@ def build_panel(
     return panel
 
 
+def _is_label_column(col: str) -> bool:
+    """判斷是否為標籤欄（labels.add_labels 產生的未來報酬欄）。
+
+    標籤欄絕對不能當特徵，否則造成目標洩漏：訓練時模型學到
+    「用未來答案預測未來答案」，驗證期因標籤為 NaN 被中位數填補
+    而輸出常數，AUC 恆為 0.5，且最終預測全擠向 0/1 極端值。
+    """
+    for prefix in ("up_", "exc_", "fwd_ret_"):
+        if col.startswith(prefix):
+            rest = col[len(prefix):]
+            if rest.isdigit():
+                return True
+    return False
+
+
 def feature_columns(panel: pd.DataFrame) -> list[str]:
     exclude = {"close", "volume"}
-    return [c for c in panel.columns if c not in exclude]
+    return [c for c in panel.columns if c not in exclude and not _is_label_column(c)]
