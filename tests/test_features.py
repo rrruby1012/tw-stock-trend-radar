@@ -84,3 +84,9 @@ def test_特徵欄位不包含標籤欄():
     cols = F.feature_columns(panel)
     assert "close" not in cols and "volume" not in cols
     assert "ret_10" in cols
+    # 標籤欄絕對不能當特徵（目標洩漏會讓預測全擠向 0/1）
+    for label_col in ["up_10", "up_20", "exc_10", "exc_20",
+                      "fwd_ret_10", "fwd_ret_20"]:
+        assert label_col not in F.feature_columns(
+            pd.DataFrame({label_col: [1.0], "ret_10": [1.0]})), \
+            f"標籤欄 {label_col} 被誤當成特徵"
