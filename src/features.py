@@ -213,6 +213,9 @@ def build_features_for_stock(
 
     feats["close"] = close
     feats["volume"] = volume
+    # 官方原始收盤價（僅供顯示，不進模型）
+    if "close_raw" in df.columns:
+        feats["close_raw"] = df["close_raw"].astype(float)
     return feats
 
 
@@ -249,20 +252,29 @@ def build_panel(
 
 
 def _is_label_column(col: str) -> bool:
-    """判斷是否為標籤欄（labels.add_labels 產生的未來報酬欄）。
+    """判斷是否為答案欄（絕對不能當特徵）。
 
-    標籤欄絕對不能當特徵，否則造成目標洩漏：訓練時模型學到
-    「用未來答案預測未來答案」，驗證期因標籤為 NaN 被中位數填補
-    而輸出常數，AUC 恆為 0.5，且最終預測全擠向 0/1 極端值。
+    涵蓋 labels.add_labels 產生的未來報酬欄（up_10/exc_20/fwd_ret_10…）
+    以及其他常見的答案欄命名（actual_*/future_return*/target/label）。
+    答案欄若當特徵會造成目標洩漏：訓練時模型學到「用未來答案預測
+    未來答案」，驗證期因答案為 NaN 被中位數填補而輸出常數，
+    最終預測全擠向 0/1 極端值。
     """
+    c = col.lower()
+    # 未來報酬標籤：up_10, exc_20, fwd_ret_10 …
     for prefix in ("up_", "exc_", "fwd_ret_"):
-        if col.startswith(prefix):
-            rest = col[len(prefix):]
-            if rest.isdigit():
-                return True
+        if c.startswith(prefix) and c[len(prefix):].isdigit():
+            return True
+    # 其他答案欄命名
+    if c.startswith("actual_"):
+        return True
+    if c.startswith("future_return"):
+        return True
+    if c in ("target", "label", "y", "y_true"):
+        return True
     return False
 
 
 def feature_columns(panel: pd.DataFrame) -> list[str]:
-    exclude = {"close", "volume"}
+    exclude = {"close", "volume", "close_raw"}
     return [c for c in panel.columns if c not in exclude and not _is_label_column(c)]
