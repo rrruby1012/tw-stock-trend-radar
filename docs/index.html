@@ -119,8 +119,8 @@
       { key: "symbol", label: "代號 / 名稱", sortable: true, defaultDir: 1,
         render: symCell, getValue: function (r) { return r.symbol || ""; } },
       { key: "close", label: "收盤", sortable: true,
-        render: function (r) { return App.el("span", "num", App.fmtPrice(r.close)); },
-        getValue: function (r) { return r.close; } },
+        render: function (r) { return App.el("span", "num", App.fmtPrice(r.close_raw != null ? r.close_raw : r.close)); },
+        getValue: function (r) { return r.close_raw != null ? r.close_raw : r.close; } },
       { key: "p_up_10", label: "10日上漲機率", sortable: true,
         render: function (r) {
           var cell = App.probCell(r.p_up_10);
@@ -267,8 +267,8 @@
       { key: "symbol", label: "代號 / 名稱", sortable: true, defaultDir: 1,
         render: symCell, getValue: function (r) { return r.symbol || ""; } },
       { key: "close", label: "收盤", sortable: true,
-        render: function (r) { return App.el("span", "num", App.fmtPrice(r.close)); },
-        getValue: function (r) { return r.close; } },
+        render: function (r) { return App.el("span", "num", App.fmtPrice(r.close_raw != null ? r.close_raw : r.close)); },
+        getValue: function (r) { return r.close_raw != null ? r.close_raw : r.close; } },
     ];
     var hasP10 = preds.some(function (r) { return App.isValidNumber(r.p_up_10); });
     if (hasP10) {
