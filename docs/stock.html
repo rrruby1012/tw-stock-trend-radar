@@ -70,14 +70,19 @@
     var pv = App.el("span", "num", "");
     pv.style.fontSize = "1.8rem";
     pv.style.fontWeight = "800";
-    pv.textContent = App.fmtPrice(p.close_raw != null ? p.close_raw : p.close);
+    var hasRaw = p.close_raw != null;
+    pv.textContent = App.fmtPrice(hasRaw ? p.close_raw : p.close);
     priceLine.appendChild(pv);
-    priceLine.appendChild(App.el("span", "muted small", "  最新收盤價（官方原始，" + App.fmtDate(p.price_date) + "）"));
+    if (hasRaw) {
+      priceLine.appendChild(App.el("span", "muted small", "  最新收盤價（官方原始，" + App.fmtDate(p.price_date) + "）"));
+    } else {
+      priceLine.appendChild(App.el("span", "muted small", "  最新收盤價（官方原始價缺失，以下為模型計算價，請勿當作官方收盤，" + App.fmtDate(p.price_date) + "）"));
+    }
     c.appendChild(priceLine);
 
     var badges = App.el("div", "statusbar");
     if (p.adjusted_price === true) {
-      badges.appendChild(App.el("span", "badge ok", "還原權息價格"));
+      badges.appendChild(App.el("span", "badge ok", "模型使用還原權息價計算（上方顯示仍為官方原始收盤價）"));
     } else if (p.adjusted_price === false) {
       badges.appendChild(App.el("span", "badge warn", "未還原價格"));
     }
@@ -200,9 +205,16 @@
     c.appendChild(App.kvRow("最大回撤（估計值）", App.fmtPct(p.max_drawdown)));
 
     var recs = (hist && hist.predictions) || [];
-    var valid = recs.filter(function (r) { return r[2] === 1 || r[2] === 0; });
+    // 同時接受布林 true/false 與數字 1/0（JSON 格式差異）
+    function normActual(v) {
+      if (v === true || v === 1) return 1;
+      if (v === false || v === 0) return 0;
+      return null;
+    }
+    var valid = recs.filter(function (r) { return normActual(r[2]) !== null; });
     var hits = valid.filter(function (r) {
-      return (r[1] >= 0.5 && r[2] === 1) || (r[1] < 0.5 && r[2] === 0);
+      var a = normActual(r[2]);
+      return (r[1] >= 0.5 && a === 1) || (r[1] < 0.5 && a === 0);
     }).length;
     var sub = App.el("h3", "mt", "近期預測 vs 實際（10日）");
     c.appendChild(sub);
@@ -219,8 +231,8 @@
         pv.textContent = App.fmtPct(r[1]);
         pv.appendChild(App.estTag());
         li.appendChild(pv);
-        var actual = r[2] === 1 ? "上漲" : "下跌";
-        var hit = (r[1] >= 0.5 && r[2] === 1) || (r[1] < 0.5 && r[2] === 0);
+        var actual = normActual(r[2]) === 1 ? "上漲" : "下跌";
+        var hit = (r[1] >= 0.5 && normActual(r[2]) === 1) || (r[1] < 0.5 && normActual(r[2]) === 0);
         var mark = App.el("span", hit ? "hit" : "miss", (hit ? "✓ 命中" : "✗ 未命中") + "（實際" + actual + "）");
         li.appendChild(mark);
         ul.appendChild(li);
