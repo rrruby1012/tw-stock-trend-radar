@@ -31,7 +31,8 @@ var App = (function () {
 
   function fmtPrice(x) {
     if (!isValidNumber(x)) return NO_DATA;
-    return "NT$ " + x.toLocaleString("zh-TW", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // 台股報價慣例：只顯示數字（元/股），不加 NT$ 等貨幣前綴
+    return x.toLocaleString("zh-TW", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function fmtSignedPct(x, digits) {
