@@ -221,6 +221,11 @@ def generate_site(
         index = []
     if not any(e.get("date") == arch_date for e in index):
         index.append({"date": arch_date, "generated_at": meta.get("generated_at")})
+    else:
+        # 同日重跑：更新該日期的 generated_at（覆蓋舊值）
+        for e in index:
+            if e.get("date") == arch_date:
+                e["generated_at"] = meta.get("generated_at")
     index = sorted(index, key=lambda e: e.get("date", ""), reverse=True)[:90]
     # 清掉超過 90 天的舊檔
     keep_dates = {e["date"] for e in index}
