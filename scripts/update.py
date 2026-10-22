@@ -13,6 +13,8 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
+import subprocess
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -24,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src import config as config_mod
 from src import features as feat_mod
 from src import labels as labels_mod
+from src import ledger as ledger_mod
 from src import universe as universe_mod
 from src.fetch import fetch_all
 from src.sitegen import generate_site
@@ -48,6 +51,27 @@ def latest_stored_price_date(docs_dir: Path) -> str | None:
         except Exception:  # noqa: BLE001
             return None
     return None
+
+
+def _source_commit_sha(root: Path) -> str:
+    """觸發本次工作流的程式/設定 commit（兩段式證明・第一段）。
+
+    GitHub Actions 以 GITHUB_SHA 提供；本機則讀 git HEAD；皆無時為 "unknown"。
+    注意：這不是包含發布檔的 publication commit（那由 Git 歷史/attestation 提供）。
+    """
+    env_sha = os.environ.get("GITHUB_SHA")
+    if env_sha:
+        return env_sha
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.strip()
+    except Exception:  # noqa: BLE001
+        pass
+    return "unknown"
 
 
 def train_final_and_predict(panel: pd.DataFrame, feature_cols: list[str], cfg: dict):
@@ -213,6 +237,12 @@ def main() -> int:
         "data_delayed": bool(fetched.get("warnings")),
         "warnings": fetched.get("warnings", [])[:5],
     }
+    provenance = {
+        "model_version": cfg.get("project", {}).get("model_version"),
+        "config_version": cfg.get("project", {}).get("config_version"),
+        "source_commit_sha": _source_commit_sha(root),
+        "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
+    }
     generate_site(
         panel=panel,
         proba_series=proba_series,
@@ -222,6 +252,7 @@ def main() -> int:
         watchlist=included,
         cfg=cfg,
         output_dir=docs_dir,
+        provenance=provenance,
     )
     log.info("網站已產生至 %s", docs_dir)
 
@@ -271,6 +302,57 @@ def main() -> int:
                     encoding="utf-8",
                 )
         log.info("已將 %d 檔缺檔股票列為排除", len(extra_excluded))
+
+    # 9c. 正式發布：把當日預測凍結進 immutable ledger（write-once）。
+    # staging（docs/data/*.json、archive）可重跑覆寫，ledger 不可；
+    # 同日同內容冪等、同日不同內容視為衝突並讓本次 run 失敗（不靜默覆寫）。
+    meta_path = docs_dir / "data" / "meta.json"
+    meta_disk = json.loads(meta_path.read_text(encoding="utf-8"))
+    final_preds = json.loads(
+        (docs_dir / "data" / "predictions.json").read_text(encoding="utf-8")
+    )
+    published_at = pd.Timestamp.now(tz="Asia/Taipei").isoformat()
+    record = ledger_mod.build_publication_record(
+        predictions=final_preds,
+        data_cutoff_date=(meta_disk.get("data_dates") or {}).get("price"),
+        generated_at=meta_disk.get("generated_at"),
+        published_at=published_at,
+        source_commit_sha=provenance["source_commit_sha"],
+        workflow_run_id=provenance["workflow_run_id"],
+        model_version=provenance["model_version"],
+        config_version=provenance["config_version"],
+    )
+    ledger_dir = docs_dir / "data" / "ledger"
+    try:
+        frozen = ledger_mod.publish(ledger_dir, record)
+    except ledger_mod.LedgerConflict as e:
+        log.error("發布凍結失敗：%s", e)
+        return 1
+    # 回寫 staging meta 的發布狀態（ledger 原檔不動；此處只補 staging 標記）
+    for mp in [meta_path,
+               docs_dir / "data" / "archive" / f"meta_{record['data_cutoff_date']}.json"]:
+        if mp.exists():
+            m = json.loads(mp.read_text(encoding="utf-8"))
+            prov = dict(m.get("provenance") or {})
+            prov["ledger_status"] = "frozen"
+            prov["published_at"] = frozen.get("published_at")
+            m["provenance"] = prov
+            mp.write_text(json.dumps(m, ensure_ascii=False, default=str), encoding="utf-8")
+    pstats = ledger_mod.prospective_stats(
+        ledger_dir, cfg.get("prospective", {}).get("start_at")
+    )
+    log.info("前瞻發布累積：%d 日（start_at=%s）",
+             pstats["published_days"], pstats["start_at"])
+    # 前瞻累積進度寫入 live meta（前端「真實前瞻紀錄」區讀取；未達門檻只能標累積中）
+    m = json.loads(meta_path.read_text(encoding="utf-8"))
+    m["prospective_progress"] = {
+        "published_days": pstats["published_days"],
+        "nonoverlap_blocks_20d": pstats["nonoverlap_blocks_20d"],
+        "start_at": pstats["start_at"],
+        "min_published_days": cfg.get("prospective", {}).get("min_published_days", 120),
+        "status": "累積中",
+    }
+    meta_path.write_text(json.dumps(m, ensure_ascii=False, default=str), encoding="utf-8")
 
     # 10. 摘要
     up10 = val_results["targets"]["up_10"]["metrics"]
