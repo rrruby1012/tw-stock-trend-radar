@@ -37,6 +37,17 @@
     <div id="risk-table"></div>
   </section>
 
+  <section id="lab-section" style="display:none">
+    <h2 class="section-title">實驗區・未驗證</h2>
+    <p class="small muted">本區為未通過驗證之模型的原始輸出，僅予定性標示供研究對照；不可排序、不可篩選，不構成推薦或投資建議。</p>
+    <div id="lab-table" class="lab-zone"></div>
+  </section>
+
+  <section id="forward-section" style="display:none">
+    <h2 class="section-title">真實前瞻紀錄（prospective）</h2>
+    <div id="forward-body"></div>
+  </section>
+
   <section id="validation-section" style="display:none">
     <h2 class="section-title">模型驗證摘要</h2>
     <div id="validation-body"></div>
@@ -81,15 +92,45 @@
     }
   }
 
-  function renderAlert(meta) {
+  function renderAlert(meta, clsInfo, corrections) {
     var zone = document.getElementById("alert-zone");
     zone.innerHTML = "";
-    if (meta.reconstructed) {
-      var n = App.el("div", "alert info");
-      n.appendChild(App.el("strong", "", "回測重建存檔"));
-      n.appendChild(App.el("div", "", App.text(meta.reconstructed_note)));
-      zone.appendChild(n);
+    // 存檔資料分類橫幅（只在存檔模式；clsInfo 由 ledger 證明決定）
+    if (clsInfo) {
+      if (clsInfo.cls === "reconstructed") {
+        var n = App.el("div", "alert warn");
+        n.appendChild(App.el("strong", "", "事後重建存檔"));
+        n.appendChild(App.el("div", "",
+          "事後重建，不代表當日實際發布。此存檔為事後以修正後模型重建，其預測數值不得作為歷史預測實績。"));
+        var noteTxt = meta.note || meta.reconstructed_note;
+        if (noteTxt) n.appendChild(App.el("div", "small muted", App.text(noteTxt)));
+        zone.appendChild(n);
+      } else if (clsInfo.cls === "unproven") {
+        var u = App.el("div", "alert warn");
+        u.appendChild(App.el("strong", "", "未經發布 ledger 證明"));
+        u.appendChild(App.el("div", "",
+          "此存檔未在不可覆寫的發布 ledger 中找到相符的凍結紀錄（或內容雜湊不符），不視為真實前瞻發布。"));
+        zone.appendChild(u);
+      } else if (clsInfo.cls === "prospective") {
+        var pv = App.el("div", "alert info");
+        pv.appendChild(App.el("strong", "", "正式發布紀錄"));
+        pv.appendChild(App.el("div", "",
+          "此日期的預測已於發布當下凍結於發布 ledger（內容雜湊驗證相符），屬真實前瞻發布紀錄。"));
+        zone.appendChild(pv);
+      }
     }
+    // 勘誤（append-only correction ledger）：原值保留，另列更正與原因
+    (corrections || []).forEach(function (c) {
+      if (c.kind !== "correction") return;
+      var cb = App.el("div", "alert warn");
+      cb.appendChild(App.el("strong", "", "勘誤公告（原紀錄保留不覆寫）"));
+      cb.appendChild(App.el("div", "", "原因：" + App.text(c.reason)));
+      if (c.corrected) {
+        cb.appendChild(App.el("div", "small",
+          "更正內容：" + App.text(JSON.stringify(c.corrected))));
+      }
+      zone.appendChild(cb);
+    });
     if (meta.model_valid === false) {
       var a = App.el("div", "alert danger");
       // 區分「驗證未通過」與「無足夠驗證資料」，避免誤導
@@ -114,7 +155,7 @@
     return s;
   }
 
-  function renderRanking(preds) {
+  function renderRanking(preds, clsInfo) {
     var cols = [
       { key: "symbol", label: "代號 / 名稱", sortable: true, defaultDir: 1,
         render: symCell, getValue: function (r) { return r.symbol || ""; } },
@@ -124,8 +165,10 @@
       { key: "p_up_10", label: "10日上漲機率", sortable: true,
         render: function (r) {
           var cell = App.probCell(r.p_up_10);
-          // 重建存檔：顯示實際結果對照
-          if (r.reconstructed && r.actual_up_10 !== null && r.actual_up_10 !== undefined) {
+          // 實際結果對照徽章：僅限 ledger 證明的真實前瞻發布（prospective）；
+          // 事後重建/模擬資料不得呈現為預測實績
+          if (clsInfo && clsInfo.cls === "prospective" &&
+              r.actual_up_10 !== null && r.actual_up_10 !== undefined) {
             var hit = (r.p_up_10 >= 0.5) === !!r.actual_up_10;
             var tag = App.el("span", "badge " + (hit ? "ok" : "warn"),
               (hit ? "✓ " : "✗ ") + (r.actual_up_10 ? "實際上漲" : "實際下跌"));
@@ -250,45 +293,56 @@
   // 非同步競速防護：只有最後一次選擇的日期可以更新畫面
   var loadRequestId = 0;
 
-  // 研究用歷史資料表（模型未通過時顯示）：灰色、明確標註不可靠，僅顯示實際存在的欄位
-  function renderResearchTable(preds) {
+  // 模型未通過驗證時的預設畫面：不提供個股方向、不顯示精確百分比/排名/機率條。
+  // 定性標示只進「實驗區・未驗證」，且該表不可排序、不可篩選。
+  function renderInvalidView(preds, meta) {
     var sec = document.getElementById("ranking-section");
     sec.style.display = "";
-    sec.querySelector(".section-title").textContent = "研究用歷史資料表";
+    sec.querySelector(".section-title").textContent = "個股方向";
     var note = sec.querySelector(".small.muted");
-    if (note) note.textContent = "以下為模型原始輸出，僅供研究歷史資料用，不可稱為推薦或排行。";
-    var warn = App.el("div", "alert danger");
-    warn.appendChild(App.el("strong", "", "模型不可靠，禁止作為投資建議"));
+    if (note) note.textContent = "";
     var host = document.getElementById("ranking-table");
     host.innerHTML = "";
+    var warn = App.el("div", "alert danger");
+    warn.appendChild(App.el("strong", "", "模型未通過驗證，暫不提供個股方向"));
+    warn.appendChild(App.el("div", "",
+      "樣本外驗證顯示模型不具可靠預測能力，本站預設不提供任何個股的漲跌方向、機率或排名。市場價格資料請見下方實驗區對照欄位，驗證數據請見模型驗證摘要。"));
     host.appendChild(warn);
-    // 只顯示實際存在的欄位：代號、收盤、10日上漲機率（若有）
+
+    // 實驗區：僅定性標示（趨勢）＋市場資料（收盤價），靜態表、無排序/篩選控制
+    var labSec = document.getElementById("lab-section");
+    labSec.style.display = "";
+    var labHost = document.getElementById("lab-table");
+    labHost.innerHTML = "";
     var cols = [
-      { key: "symbol", label: "代號 / 名稱", sortable: true, defaultDir: 1,
-        render: symCell, getValue: function (r) { return r.symbol || ""; } },
-      { key: "close", label: "收盤", sortable: true,
-        render: function (r) { return App.el("span", "num", App.fmtPrice(r.close_raw != null ? r.close_raw : r.close)); },
-        getValue: function (r) { return r.close_raw != null ? r.close_raw : r.close; } },
+      { key: "symbol", label: "代號 / 名稱", sortable: false, render: symCell },
+      { key: "close", label: "收盤（官方原始）", sortable: false,
+        render: function (r) { return App.el("span", "num", App.fmtPrice(r.close_raw != null ? r.close_raw : r.close)); } },
+      { key: "trend", label: "定性標示（實驗・未驗證）", sortable: false,
+        render: function (r) { return App.trendBadge(r.trend); } }
     ];
-    var hasP10 = preds.some(function (r) { return App.isValidNumber(r.p_up_10); });
-    if (hasP10) {
-      cols.push({ key: "p_up_10", label: "10日上漲機率（未驗證）", sortable: true,
-        render: function (r) {
-          var cell = App.probCell(r.p_up_10);
-          if (r.reconstructed && r.actual_up_10 !== null && r.actual_up_10 !== undefined) {
-            var hit = (r.p_up_10 >= 0.5) === !!r.actual_up_10;
-            var tag = App.el("span", "badge " + (hit ? "ok" : "warn"),
-              (hit ? "✓ " : "✗ ") + (r.actual_up_10 ? "實際上漲" : "實際下跌"));
-            tag.style.marginLeft = "6px";
-            tag.style.fontSize = "0.72rem";
-            cell.appendChild(tag);
-          }
-          return cell;
-        },
-        getValue: function (r) { return r.p_up_10; } });
-    }
-    host.appendChild(App.buildSortableTable(cols, preds, { key: "symbol", dir: 1 }));
-    host.classList.add("research-gray");
+    var rows = preds.slice().sort(function (a, b) {
+      return String(a.symbol).localeCompare(String(b.symbol));
+    });
+    labHost.appendChild(App.buildSortableTable(cols, rows, { key: "symbol", dir: 1 }));
+  }
+
+  // 真實前瞻紀錄狀態：只認 ledger 累積（meta.prospective_progress 由發布流程寫入）
+  function renderForward(meta, ledger) {
+    var sec = document.getElementById("forward-section");
+    var body = document.getElementById("forward-body");
+    body.innerHTML = "";
+    var card = App.el("div", "card");
+    var pp = meta.prospective_progress || null;
+    var days = pp ? pp.published_days : (ledger ? ledger.index.length : 0);
+    var minDays = (pp && pp.min_published_days) || 120;
+    card.appendChild(App.el("p", "",
+      "真實前瞻發布紀錄（發布當下凍結於不可覆寫 ledger 者）已累積 " + days + " / " + minDays + " 個交易日。"));
+    card.appendChild(App.el("p", "small muted",
+      "狀態：資料累積中。未達門檻前，即使歷史驗證改善，模型也不會標示為可信；" +
+      "回溯模擬（walk-forward）與事後重建資料永遠不計入此前瞻紀錄。"));
+    body.appendChild(card);
+    sec.style.display = "";
   }
 
   // 主流程：載入指定日期的資料（null = 最新）
@@ -303,13 +357,17 @@
     document.getElementById("alert-zone").innerHTML = "";
     document.getElementById("ranking-section").style.display = "none";
     document.getElementById("risk-section").style.display = "none";
+    document.getElementById("lab-section").style.display = "none";
+    document.getElementById("forward-section").style.display = "none";
     document.getElementById("validation-section").style.display = "none";
     var rankingHost = document.getElementById("ranking-table");
     rankingHost.innerHTML = "";
     rankingHost.classList.remove("research-gray");
-    // 恢復排行榜標題（研究表會改掉它）
+    // 恢復排行榜標題（未驗證畫面會改掉它）
     var rankTitle = document.querySelector("#ranking-section .section-title");
     if (rankTitle) rankTitle.textContent = "預測排行榜";
+    var rankNote = document.querySelector("#ranking-section .small.muted");
+    if (rankNote) rankNote.textContent = "點選欄位標題可排序；點選列可查看個股詳情。所有機率皆為模型估計值。";
 
     App.fetchJSON(metaPath).then(function (res) {
       if (myId !== loadRequestId) return; // 已被更新的選擇取代
@@ -319,8 +377,6 @@
       }
       var meta = res.data || {};
       renderStatus(meta, isArchive, archDate);
-      var valid = renderAlert(meta);
-      renderFooter(meta);
 
       // 驗證數據一律從 validation.json 讀取（無論模型通過與否）
       var valPath = isArchive ? null : "data/validation.json";
@@ -328,28 +384,36 @@
 
       App.fetchJSON(predPath).then(function (pr) {
         if (myId !== loadRequestId) return;
-        return valPromise.then(function (vr) {
+        return Promise.all([valPromise, App.fetchLedger()]).then(function (rs) {
           if (myId !== loadRequestId) return;
+          var vr = rs[0], ledger = rs[1];
           var validation = (vr.ok && vr.data) || null;
+          // 存檔分類只認明確欄位 + ledger 證明（不以日期/檔名猜測）
+          var clsInfo = isArchive ? App.resolveArchiveClass(meta, archDate, ledger) : null;
+          var corrections = isArchive ? App.correctionsFor(ledger, archDate) : [];
+          var valid = renderAlert(meta, clsInfo, corrections);
+          renderFooter(meta);
           renderValidation(meta, validation);
+          renderForward(meta, ledger);
           if (!pr.ok || !Array.isArray(pr.data)) {
             if (valid) showError("預測資料讀取失敗（" + predPath + "）。");
             return;
           }
           if (valid) {
-            renderRanking(pr.data);
+            renderRanking(pr.data, clsInfo);
             renderRisk(pr.data);
           } else {
-            renderResearchTable(pr.data);
+            renderInvalidView(pr.data, meta);
           }
         });
       });
     });
   }
 
-  // 歷史存檔選單
+  // 歷史存檔選單（選項標示資料分類：正式發布須 ledger 命中，其餘舊存檔為事後重建）
   function initArchive() {
-    App.fetchJSON("data/archive/index.json").then(function (res) {
+    Promise.all([App.fetchJSON("data/archive/index.json"), App.fetchLedger()]).then(function (rs) {
+      var res = rs[0], ledger = rs[1];
       if (!res.ok || !Array.isArray(res.data) || !res.data.length) return;
       var bar = document.getElementById("archive-bar");
       var sel = document.getElementById("archive-select");
@@ -362,7 +426,12 @@
         if (!e.date) return;
         var o = document.createElement("option");
         o.value = e.date;
-        o.textContent = e.date + (e.generated_at ? "（" + App.fmtDateTime(e.generated_at) + " 更新）" : "");
+        var clsTag;
+        if (App.ledgerEntryFor(ledger, e.date)) clsTag = "正式發布";
+        else if (e.data_class === "prospective") clsTag = "未經 ledger 證明";
+        else clsTag = "事後重建";
+        o.textContent = e.date + "（" + clsTag + "）" +
+          (e.generated_at ? " " + App.fmtDateTime(e.generated_at) + " 更新" : "");
         sel.appendChild(o);
       });
       sel.addEventListener("change", function () {
