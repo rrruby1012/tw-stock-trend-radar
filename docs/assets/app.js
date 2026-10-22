@@ -346,6 +346,62 @@ var App = (function () {
     } catch (e) { return null; }
   }
 
+  /* ---------- 資料分類與發布 ledger（2026-10 可信度規格） ---------- */
+  // 三類資料靠明確欄位分流，禁止以日期/檔名猜測：
+  // walkforward_sim（樣本外模擬）、reconstructed（事後重建）、prospective（真實前瞻發布）。
+  // prospective 只認 ledger：日期須在 ledger index 中，且雜湊（雙方都有時）相符。
+  function declaredClass(obj) {
+    if (!obj) return null;
+    if (obj.data_class) return obj.data_class;
+    if (obj.provenance && obj.provenance.data_class) return obj.provenance.data_class;
+    if (obj.reconstructed) return "reconstructed";
+    return null;
+  }
+
+  function ledgerEntryFor(ledger, dateStr) {
+    if (!ledger || !Array.isArray(ledger.index) || !dateStr) return null;
+    var found = null;
+    ledger.index.forEach(function (e) { if (e.date === dateStr) found = e; });
+    return found;
+  }
+
+  // 回傳 {cls, proven}：cls 為 prospective / reconstructed / unproven / legacy
+  function resolveArchiveClass(meta, dateStr, ledger) {
+    var declared = declaredClass(meta);
+    var entry = ledgerEntryFor(ledger, dateStr);
+    if (entry) {
+      var sha = meta && meta.provenance && meta.provenance.prediction_sha256;
+      if (!sha || !entry.prediction_sha256 || sha === entry.prediction_sha256) {
+        return { cls: "prospective", proven: true };
+      }
+      return { cls: "unproven", proven: false }; // 雜湊不符：內容與凍結紀錄不同
+    }
+    if (declared === "prospective") return { cls: "unproven", proven: false };
+    if (declared === "walkforward_sim") return { cls: "walkforward_sim", proven: false };
+    // reconstructed 旗標/欄位，或完全無證明的舊存檔：一律 reconstructed，不得升格
+    return { cls: "reconstructed", proven: false };
+  }
+
+  var _ledgerPromise = null;
+  function fetchLedger() {
+    if (_ledgerPromise) return _ledgerPromise;
+    _ledgerPromise = Promise.all([
+      fetchJSON("data/ledger/index.json"),
+      fetchJSON("data/ledger/corrections.json")
+    ]).then(function (rs) {
+      return {
+        index: (rs[0].ok && Array.isArray(rs[0].data)) ? rs[0].data : [],
+        corrections: (rs[1].ok && Array.isArray(rs[1].data)) ? rs[1].data : []
+      };
+    });
+    return _ledgerPromise;
+  }
+
+  function correctionsFor(ledger, dateStr) {
+    if (!ledger || !Array.isArray(ledger.corrections) || !dateStr) return [];
+    return ledger.corrections.filter(function (e) { return e.date === dateStr; });
+  }
+
   return {
     NO_DATA: NO_DATA,
     fetchJSON: fetchJSON,
@@ -365,6 +421,11 @@ var App = (function () {
     sigList: sigList,
     drawPriceChart: drawPriceChart,
     buildSortableTable: buildSortableTable,
-    getQueryParam: getQueryParam
+    getQueryParam: getQueryParam,
+    declaredClass: declaredClass,
+    resolveArchiveClass: resolveArchiveClass,
+    fetchLedger: fetchLedger,
+    correctionsFor: correctionsFor,
+    ledgerEntryFor: ledgerEntryFor
   };
 })();
