@@ -7,6 +7,9 @@ project:
   name: "台股兩週至一個月趨勢雷達"
   version: "0.1.0"
   timezone: "Asia/Taipei"
+  # 發布 provenance 用（寫入 ledger 與 meta.provenance；變更模型或設定時須同步更新）
+  model_version: "logreg-isotonic-v1"
+  config_version: "2026-10-23.1"
 
 # ---------- 預測目標 ----------
 horizons:
@@ -90,6 +93,18 @@ credibility:
 trend:
   bullish_threshold: 0.58      # 10日與20日上漲機率加權 >= 此值 → 偏多
   bearish_threshold: 0.42      # <= 此值 → 偏空，其餘為盤整
+
+# ---------- 真實前瞻發布（prospective ledger） ----------
+# 規格鎖定（2026-10-22 稽核）：只有部署後由發布流程凍結進 ledger 的紀錄才算
+# 真實前瞻；既有日期不得事後升格。start_at 於第一階段部署時設定，值為
+# 「執行部署推送之前」的 UTC 時間戳（ISO 8601、Z 結尾）——保守且可稽核：
+# 不聲稱預知 Pages 部署完成時間，只保證界線之後由新 workflow 產生並成功
+# 凍結的紀錄才計數；部署推送本身不建立任何 prospective 紀錄。
+# null 表示尚未部署，前瞻累積尚未開始（任何紀錄都不計入）。
+prospective:
+  start_at: "2026-10-22T16:23:27Z"
+  min_published_days: 120          # 轉 credible 的最低實際發布交易日數（閘門屬第二階段）
+  min_nonoverlap_blocks_20d: 6     # 至少涵蓋 6 個不重疊的 20 日區塊
 
 # ---------- 網站 ----------
 site:
