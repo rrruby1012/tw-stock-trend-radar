@@ -101,6 +101,15 @@ a { color: var(--accent); }
   opacity: 1;
 }
 
+/* ---------- 實驗區・未驗證（定性標示專區） ---------- */
+.lab-zone {
+  border: 2px dashed #b7791f;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(183, 121, 31, 0.07);
+}
+.lab-zone table.rank { margin: 0; }
+
 /* ---------- 排除名單 ---------- */
 .excluded-list {
   margin: 8px 0 0;
