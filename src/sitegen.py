@@ -87,7 +87,9 @@ def generate_site(
     watchlist: pd.DataFrame,
     cfg: dict,
     output_dir: str | Path,
+    provenance: dict | None = None,
 ) -> None:
+    from .ledger import CLASS_PROSPECTIVE, CLASS_WALKFORWARD, prediction_sha256
     from .models import TARGETS, classify_trend, price_interval
 
     out = Path(output_dir)
@@ -169,10 +171,30 @@ def generate_site(
                 pred_hist.append([r["date"].strftime("%Y-%m-%d"), _r(r["proba"]), actual])
         (data_dir / f"history_{sid}.json").write_text(
             json.dumps({"symbol": sid, "name": name_map.get(sid, sid),
-                        "prices": hist_prices, "predictions": pred_hist},
+                        "prices": hist_prices, "predictions": pred_hist,
+                        # 資料分類：history 的 predictions 是 walk-forward 樣本外
+                        # 「模擬」紀錄，非本站實際發布，永不計入 prospective 統計
+                        "predictions_class": CLASS_WALKFORWARD,
+                        "predictions_note": "walk-forward 樣本外模擬紀錄，非實際發布"},
                        ensure_ascii=False),
             encoding="utf-8",
         )
+
+    # 發布 provenance：本管線產出的預測由 update.py 在同一 run 凍結進 ledger；
+    # data_class 明確標示，不靠日期/檔名推測。雜湊供前端與 ledger 比對。
+    prov_in = provenance or {}
+    meta = dict(meta)
+    meta["provenance"] = {
+        "data_class": CLASS_PROSPECTIVE,
+        "prediction_sha256": prediction_sha256(predictions),
+        "model_version": prov_in.get("model_version"),
+        "config_version": prov_in.get("config_version"),
+        "source_commit_sha": prov_in.get("source_commit_sha"),
+        "workflow_run_id": prov_in.get("workflow_run_id"),
+        "generated_at": meta.get("generated_at"),
+        "ledger_status": "pending",  # update.py 發布成功後改為 frozen 並補 published_at
+    }
+    meta["data_class"] = CLASS_PROSPECTIVE
 
     # 若模型不可信：不顯示推薦排名（前端依 model_valid 隱藏），此處仍輸出原始數值供查核
     (data_dir / "predictions.json").write_text(
@@ -220,12 +242,16 @@ def generate_site(
     except Exception:  # noqa: BLE001
         index = []
     if not any(e.get("date") == arch_date for e in index):
-        index.append({"date": arch_date, "generated_at": meta.get("generated_at")})
+        index.append({"date": arch_date, "generated_at": meta.get("generated_at"),
+                      "data_class": meta["provenance"]["data_class"],
+                      "prediction_sha256": meta["provenance"]["prediction_sha256"]})
     else:
-        # 同日重跑：更新該日期的 generated_at（覆蓋舊值）
+        # 同日重跑：更新該日期的 generated_at（staging 可覆寫；凍結證明在 ledger）
         for e in index:
             if e.get("date") == arch_date:
                 e["generated_at"] = meta.get("generated_at")
+                e["data_class"] = meta["provenance"]["data_class"]
+                e["prediction_sha256"] = meta["provenance"]["prediction_sha256"]
     index = sorted(index, key=lambda e: e.get("date", ""), reverse=True)[:90]
     # 清掉超過 90 天的舊檔
     keep_dates = {e["date"] for e in index}
