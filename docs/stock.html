@@ -95,9 +95,14 @@
         "注意：此為未還原價格，除權息日會出現價格跳空，請勿誤判為暴跌。"));
     }
 
+    // 趨勢定性標示：模型未通過驗證時不在頁首呈現方向，改於實驗區顯示
     var t = App.el("div", "mt", "");
     t.appendChild(App.el("span", "muted small", "趨勢："));
-    t.appendChild(App.trendBadge(p.trend));
+    if (window.__modelValid === false) {
+      t.appendChild(App.el("span", "muted small", "未提供（模型未通過驗證）"));
+    } else {
+      t.appendChild(App.trendBadge(p.trend));
+    }
     c.appendChild(t);
   }
 
@@ -115,10 +120,30 @@
     rows.forEach(function (r) { c.appendChild(App.probRow(r[0], r[1])); });
   }
 
-  function renderActual(p) {
+  // 模型未通過驗證時：不顯示精確機率/機率條，只在實驗區予定性標示，
+  // 且所有帶方向感的規則式訊號（有利/風險/失效條件）也一併收進實驗區。
+  function renderLab(p) {
+    section("實驗區・未驗證");
+    var c = card();
+    c.classList.add("lab-zone");
+    var line = App.el("div", "kv", "");
+    line.appendChild(App.el("span", "k", "定性標示（實驗・未驗證）"));
+    var v = App.el("span", "v");
+    v.appendChild(App.trendBadge(p.trend));
+    line.appendChild(v);
+    c.appendChild(line);
+    c.appendChild(App.el("p", "small muted",
+      "模型未通過驗證，本區僅顯示定性標示供研究對照，不提供精確機率、機率條、排名或買賣建議。"));
+    return c;
+  }
+
+  function renderActual(p, clsInfo) {
     // 實際結果：有 actual_up_10 顯示漲跌/報酬/命中，否則顯示待驗證
     if (p.actual_up_10 === undefined && p.actual_ret_10 === undefined) return;
-    section("實際結果（10 個交易日後）");
+    // 命中判定僅限真實前瞻發布（prospective）：事後重建資料的「預測」非當日發布，
+    // 不得與實際結果並列判命中；此時只呈現市場資料本身。
+    var canJudge = !isArchive || (clsInfo && clsInfo.cls === "prospective");
+    section(canJudge ? "實際結果（10 個交易日後）" : "實際結果（市場資料）");
     var c = card();
     if (p.actual_up_10 === null || p.actual_up_10 === undefined) {
       c.appendChild(App.el("p", "muted", "待驗證：10 個交易日尚未結束，實際結果未產生。"));
@@ -128,6 +153,11 @@
     c.appendChild(App.kvRow("實際漲跌", App.el("span", p.actual_up_10 ? "bull" : "bear", actualTxt)));
     if (App.isValidNumber(p.actual_ret_10)) {
       c.appendChild(App.kvRow("實際報酬率", App.el("span", "num", App.fmtPct(p.actual_ret_10))));
+    }
+    if (!canJudge) {
+      c.appendChild(App.el("p", "small muted",
+        "此為事後重建存檔：上方僅為市場實際資料，不提供「預測是否命中」判定，重建數值不得作為預測實績。"));
+      return;
     }
     if (App.isValidNumber(p.p_up_10)) {
       var hit = (p.p_up_10 >= 0.5) === !!p.actual_up_10;
@@ -168,13 +198,20 @@
       "價格區間與下行風險由歷史波動度推估，僅為估計值，實際價格可能超出區間。"));
   }
 
-  function renderSignals(p) {
-    // 無訊號資料時隱藏整個區塊
+  function renderSignals(p, targetCard) {
+    // 無訊號資料時隱藏整個區塊。
+    // targetCard 有傳入時（未驗證→實驗區），內容直接附進該卡片、不另開 section。
     var hasBull = p.bull_signals && p.bull_signals.length;
     var hasBear = p.bear_signals && p.bear_signals.length;
     if (!hasBull && !hasBear && !p.invalidation) return;
-    section("訊號與判斷條件");
-    var c = card();
+    var c;
+    if (targetCard) {
+      c = targetCard;
+      c.appendChild(App.el("h3", "mt", "規則式訊號（實驗・未驗證）"));
+    } else {
+      section("訊號與判斷條件");
+      c = card();
+    }
     if (hasBull) {
       c.appendChild(App.el("h3", "", "主要有利訊號"));
       c.appendChild(App.sigList(p.bull_signals, "bull"));
@@ -197,12 +234,20 @@
     App.drawPriceChart(wrap, prices.slice(-250));
   }
 
-  function renderHistory(p, hist) {
-    section("預測紀錄與歷史表現");
+  function renderHistory(p, hist, meta) {
+    section("樣本外模擬紀錄（walk-forward）");
     var c = card();
-    c.appendChild(App.kvRow("10日上漲預測歷史命中率（估計值）", App.fmtPct(p.hit_rate_10)));
-    c.appendChild(App.kvRow("樣本外樣本數", App.isValidNumber(p.oos_n) ? Number(p.oos_n).toLocaleString("zh-TW") : App.NO_DATA));
+    c.appendChild(App.el("p", "small muted",
+      "以下為 walk-forward 樣本外「模擬」紀錄（資料類別：walkforward_sim），" +
+      "由歷史資料重跑模型產生，非本站實際發布，不得計入真實前瞻實績。"));
+    c.appendChild(App.kvRow("模擬命中率（10日上漲，樣本外模擬）", App.fmtPct(p.hit_rate_10)));
+    c.appendChild(App.kvRow("樣本外模擬樣本數", App.isValidNumber(p.oos_n) ? Number(p.oos_n).toLocaleString("zh-TW") : App.NO_DATA));
     c.appendChild(App.kvRow("最大回撤（估計值）", App.fmtPct(p.max_drawdown)));
+    var pp = (meta && meta.prospective_progress) || null;
+    if (pp) {
+      c.appendChild(App.kvRow("真實前瞻發布累積",
+        "已發布 " + pp.published_days + " / " + (pp.min_published_days || 120) + " 個交易日（資料累積中）"));
+    }
 
     var recs = (hist && hist.predictions) || [];
     // 同時接受布林 true/false 與數字 1/0（JSON 格式差異）
@@ -222,7 +267,7 @@
       c.appendChild(App.el("p", "muted small", "尚無已實現的預測紀錄。"));
     } else {
       c.appendChild(App.el("p", "small muted",
-        "已實現 " + valid.length + " 筆，命中 " + hits + " 筆（" + (100 * hits / valid.length).toFixed(1) + "%）。"));
+        "模擬已實現 " + valid.length + " 筆，命中 " + hits + " 筆（" + (100 * hits / valid.length).toFixed(1) + "%）。此為模擬結果，非實際發布紀錄。"));
       var ul = App.el("ul", "hist-list");
       valid.slice(-15).reverse().forEach(function (r) {
         var li = App.el("li", "");
@@ -253,7 +298,8 @@
 
   function filterHistToDate(hist) {
     if (!isArchive || !hist) return hist;
-    var out = { symbol: hist.symbol, name: hist.name, prices: [], predictions: [] };
+    var out = { symbol: hist.symbol, name: hist.name, prices: [], predictions: [],
+                predictions_class: hist.predictions_class, predictions_note: hist.predictions_note };
     (hist.prices || []).forEach(function (r) {
       if (String(r[0]).slice(0, 10) <= archDate) out.prices.push(r);
     });
@@ -263,16 +309,39 @@
     return out;
   }
 
-  App.fetchJSON(metaPath).then(function (mr) {
+  Promise.all([App.fetchJSON(metaPath), App.fetchLedger()]).then(function (rs) {
+    var mr = rs[0], ledger = rs[1];
     var meta = (mr.ok && mr.data) || {};
+    window.__modelValid = meta.model_valid !== false;
     document.getElementById("f-disclaimer").textContent = App.text(meta.risk_disclaimer);
     document.getElementById("footer").style.display = "";
     var zone = document.getElementById("alert-zone");
+    var clsInfo = null;
     if (isArchive) {
-      var nb = App.el("div", "alert info");
-      nb.appendChild(App.el("strong", "", "歷史存檔：" + App.fmtDate(archDate)));
-      nb.appendChild(App.el("div", "", "以下為該日期的預測快照；價格走勢與預測紀錄已截斷至該日期。"));
-      zone.appendChild(nb);
+      clsInfo = App.resolveArchiveClass(meta, archDate, ledger);
+      if (clsInfo.cls === "reconstructed") {
+        var rb = App.el("div", "alert warn");
+        rb.appendChild(App.el("strong", "", "事後重建存檔：" + App.fmtDate(archDate)));
+        rb.appendChild(App.el("div", "", "事後重建，不代表當日實際發布。以下數值為事後以修正後模型重建，不得作為當日預測實績；價格走勢與模擬紀錄已截斷至該日期。"));
+        zone.appendChild(rb);
+      } else if (clsInfo.cls === "unproven") {
+        var ub = App.el("div", "alert warn");
+        ub.appendChild(App.el("strong", "", "未經發布 ledger 證明：" + App.fmtDate(archDate)));
+        ub.appendChild(App.el("div", "", "此存檔未在不可覆寫的發布 ledger 中找到相符的凍結紀錄，不視為真實前瞻發布。"));
+        zone.appendChild(ub);
+      } else if (clsInfo.cls === "prospective") {
+        var pb = App.el("div", "alert info");
+        pb.appendChild(App.el("strong", "", "正式發布紀錄：" + App.fmtDate(archDate)));
+        pb.appendChild(App.el("div", "", "此日期的預測已於發布當下凍結於發布 ledger（內容雜湊驗證相符）。"));
+        zone.appendChild(pb);
+      }
+      App.correctionsFor(ledger, archDate).forEach(function (ce) {
+        if (ce.kind !== "correction") return;
+        var cb = App.el("div", "alert warn");
+        cb.appendChild(App.el("strong", "", "勘誤公告（原紀錄保留不覆寫）"));
+        cb.appendChild(App.el("div", "", "原因：" + App.text(ce.reason)));
+        zone.appendChild(cb);
+      });
     }
     if (meta.model_valid === false) {
       var a = App.el("div", "alert danger");
@@ -301,15 +370,23 @@
       }
       document.getElementById("content").innerHTML = "";
       renderHeader(p, meta);
-      renderProbs(p);
-      renderActual(p);
-      renderInterval(p);
-      renderSignals(p);
+      if (window.__modelValid === false) {
+        // 未驗證：方向性內容（定性標示＋規則式訊號）全部收進實驗區；
+        // 預設區只剩中性事實（收盤價、日期、價格/走勢/實際市場資料、模擬紀錄標示區）
+        var labCard = renderLab(p);
+        renderSignals(p, labCard);
+      } else {
+        renderProbs(p);
+        renderSignals(p);
+      }
+      renderActual(p, clsInfo);
+      // 價格區間/下行風險為模型精確估計值：未通過驗證時不顯示（與機率同規格）
+      if (window.__modelValid !== false) renderInterval(p);
 
       App.fetchJSON("data/history_" + encodeURIComponent(symbol) + ".json").then(function (hr) {
         var hist = filterHistToDate((hr.ok && hr.data) || null);
         renderChart(hist);
-        renderHistory(p, hist);
+        renderHistory(p, hist, meta);
       });
     });
   });
