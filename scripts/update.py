@@ -102,11 +102,23 @@ def train_final_and_predict(panel: pd.DataFrame, feature_cols: list[str], cfg: d
         if len(train) < 500:
             log.warning("%s 訓練樣本不足（%d），跳過", target, len(train))
             continue
-        # 80/20 按日期切分做校準
+        # 80/20 按日期切分做校準，fit 與 cal 之間隔 embargo（與 validation
+        # 相同慣例：embargo_days，預設 20 個交易日；train/test 的 embargo
+        # 數值本身不動；被空出的日期兩邊都不用，不得回退為相鄰切分）。
+        # 審計原問題：舊切分 fit/cal 日期相鄰，標籤窗格重疊的樣本會同時出現
+        # 在 fit 與 cal 兩側，造成校準洩漏。
+        from src.validation import split_fit_cal_dates
+
         tdates = train.index.get_level_values("date").unique().sort_values()
-        split = tdates[int(len(tdates) * 0.8)]
-        fit_df = train[train.index.get_level_values("date") <= split]
-        cal_df = train[train.index.get_level_values("date") > split]
+        fit_dates, cal_dates = split_fit_cal_dates(
+            tdates, fit_fraction=0.8, embargo_days=embargo
+        )
+        if len(fit_dates) == 0 or len(cal_dates) == 0:
+            log.warning("%s fit/cal 切分後校準集為空（embargo 後無日期），跳過",
+                        target)
+            continue
+        fit_df = train[train.index.get_level_values("date").isin(fit_dates)]
+        cal_df = train[train.index.get_level_values("date").isin(cal_dates)]
         X_fit, y_fit = fit_df[feature_cols], fit_df[target]
         X_cal, y_cal = cal_df[feature_cols], cal_df[target]
         est = LogisticModel(
