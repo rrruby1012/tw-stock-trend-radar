@@ -5,5 +5,12 @@
   "prediction_sha256": "258bc0b7d24d7f72fdbd8bc968220d02103316c3efb6db1132920a7ffe26113f",
   "published_at": "2026-10-27T19:13:44.240425+08:00",
   "data_class": "prospective"
+ },
+ {
+  "date": "2026-10-28",
+  "data_cutoff_date": "2026-10-28",
+  "prediction_sha256": "7654129916860293143e920f0ee97e5a545e5bae5279ea463aa6fdb17ad08e2d",
+  "published_at": "2026-10-28T19:17:53.661572+08:00",
+  "data_class": "prospective"
  }
 ]
