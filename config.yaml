@@ -8,8 +8,8 @@ project:
   version: "0.1.0"
   timezone: "Asia/Taipei"
   # 發布 provenance 用（寫入 ledger 與 meta.provenance；變更模型或設定時須同步更新）
-  model_version: "logreg-isotonic-v1"
-  config_version: "2026-10-23.1"
+  model_version: "logreg-isotonic-v2"
+  config_version: "2026-10-29.1"
 
 # ---------- 預測目標 ----------
 horizons:
@@ -45,6 +45,12 @@ features:
   macd_slow: 26
   macd_signal: 9
   # 財報/月營收：必須依公告日對齊（point-in-time），由 features.py 保證
+  # 財報 PIT 可用日（保守近似，實際公告日可能更早或更晚，此規則寧可晚用、
+  # 不提前用）：Q1/Q2/Q3 季結後 45 天、Q4 年結後 90 天（各季法定截止日近似）。
+  # 月營收 PIT：月份結束後第 10 日。
+  # 籌碼落後天數：三大法人/融資融券公布時間晚於 18:30 排程，特徵日期 t
+  # 只能用到 t - chip_lag_days 的籌碼資料；預設 1（與舊行為一致）。
+  chip_lag_days: 1
   use_monthly_revenue: true
   use_financial_statements: true
   use_institutional_flow: true   # 外資/投信/自營商買賣超
