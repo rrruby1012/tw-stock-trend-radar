@@ -3,9 +3,11 @@
 鐵律：特徵日期 t 的特徵值，只能使用在 t 當時已經公開的資料。
 - 價格/量能：t 收盤後已公開（17:30 前），可用 t 當日資料。
 - 三大法人（20:00 公布）、融資融券（21:00 公布）：排程為 18:30，
-  因此特徵日期 t 只能用到 t-1 的籌碼資料（以 chip_lag_days 控制）。
+  因此特徵日期 t 只能用到 t-1 的籌碼資料（以 config.yaml 的
+  features.chip_lag_days 控制，預設 1）。
 - 月營收：採保守規則「月份結束後第 10 日」視為可取得。
-- 財報：採保守規則「季底後 75 日」視為可取得。
+- 財報：按各季法定截止日保守近似——Q1/Q2/Q3 季結後 45 日、Q4 年結後
+  90 日視為可取得。實際公告日可能更早或更晚，此規則寧可晚用、不提前用。
 """
 from __future__ import annotations
 
@@ -65,7 +67,16 @@ def _pit_monthly_revenue(revenue: pd.DataFrame) -> pd.DataFrame:
 
 
 def _pit_financials(fin: pd.DataFrame) -> pd.DataFrame:
-    """回傳以 availability_date 為鍵的財報特徵（季底後 75 日保守規則）。"""
+    """回傳以 availability_date 為鍵的財報特徵。
+
+    PIT 可用日按各季法定截止日保守近似：Q1/Q2/Q3 季結後 45 日、
+    Q4 年結後 90 日，且 Q4 可用日不得早於次年 3/31（閏年時年結後
+    90 日會落在 3/30，比法定截止日早一日，故取兩者較晚者）。
+    實際公告日可能更早或更晚，此規則寧可晚用、不提前用（不用舊的
+    固定季底後 75 日規則：Q4 年報法定 3/31 前公布，舊規則最多提前
+    約兩週用到）。非季底日期（理論上不應出現，date 應為季底）
+    保守以 90 日計。
+    """
     if fin.empty:
         return pd.DataFrame(columns=["availability_date", "ni_yoy", "gross_margin"])
     df = fin.copy()
@@ -74,7 +85,24 @@ def _pit_financials(fin: pd.DataFrame) -> pd.DataFrame:
     pivot = df.pivot_table(index="date", columns="type", values="value", aggfunc="last")
     pivot = pivot.sort_index()
     out = pd.DataFrame(index=pivot.index)
-    out["availability_date"] = pd.to_datetime(pivot.index) + pd.Timedelta(days=75)
+    quarter_end_month = pd.to_datetime(pivot.index).month
+    # Q1(3月)/Q2(6月)/Q3(9月)：45 日；Q4(12月)：90 日；其他月份：90 日（保守）
+    lag_days = np.where(
+        quarter_end_month == 12,
+        90,
+        np.where(quarter_end_month.isin([3, 6, 9]), 45, 90),
+    )
+    out["availability_date"] = pd.to_datetime(pivot.index) + pd.to_timedelta(lag_days, unit="D")
+    # Q4 下限：閏年時年結後 90 日落在次年 3/30，比法定 3/31 早一日；
+    # 故 Q4 可用日取「年結後 90 日」與「次年 3/31」兩者較晚者。
+    # 非閏年時兩者相同（年結後 90 日即為 3/31）。
+    q4_mask = quarter_end_month == 12
+    if q4_mask.any():
+        q4_ends = pd.to_datetime(pivot.index[q4_mask])
+        mar31 = pd.DatetimeIndex([pd.Timestamp(y + 1, 3, 31) for y in q4_ends.year])
+        avail = out["availability_date"]
+        avail.loc[q4_mask] = np.maximum(avail.loc[q4_mask].values, mar31.values)
+        out["availability_date"] = avail
     # 稅後淨利年增率（單季比單季；EPS 不直接跨季相加，見陷阱說明）
     ni_col = next((c for c in ["NetIncome", "net_income", "本期淨利"] if c in pivot.columns), None)
     rev_col = next((c for c in ["Revenue", "revenue", "營業收入"] if c in pivot.columns), None)
@@ -153,7 +181,9 @@ def build_features_for_stock(
         feats["rel_strength_60"] = feats["ret_60"] - idx_ret60.reindex(feats.index)
 
     # 籌碼：三大法人（T-1 落後，反映 18:30 排程時當日資料尚未公布）
-    chip_lag = int(cfg["data"].get("chip_lag_days", 1))
+    # 落後天數來自設定 features.chip_lag_days（預設 1，與舊行為一致；
+    # 兼容舊寫法：若 features 未設，則讀 data.chip_lag_days）。
+    chip_lag = int(fcfg.get("chip_lag_days", cfg.get("data", {}).get("chip_lag_days", 1)))
     if inst is not None and not inst.empty:
         ins = inst.sort_values("date").set_index("date")
         for col, name in [("foreign_net", "foreign"), ("trust_net", "trust"), ("dealer_net", "dealer")]:
@@ -174,7 +204,7 @@ def build_features_for_stock(
             streak = sign * (sign.groupby((sign != sign.shift()).cumsum()).cumcount() + 1)
             feats["inst_streak"] = streak.shift(chip_lag).reindex(feats.index).clip(-10, 10)
 
-    # 融資融券（同樣 T-1）
+    # 融資融券（同樣以 chip_lag 落後）
     if margin is not None and not margin.empty:
         mg = margin.sort_values("date").set_index("date")
         for bal_col, name in [("MarginPurchaseTodayBalance", "margin"), ("ShortSaleTodayBalance", "short")]:
@@ -196,7 +226,7 @@ def build_features_for_stock(
             ).set_index("date")
             feats["revenue_yoy"] = merged["revenue_yoy"]
 
-    # 財報（PIT：季底後 75 日）
+    # 財報（PIT：Q1-Q3 季結後 45 日、Q4 年結後 90 日，保守近似）
     if financials is not None and cfg["features"].get("use_financial_statements", True):
         fin_pit = _pit_financials(financials)
         if not fin_pit.empty:
