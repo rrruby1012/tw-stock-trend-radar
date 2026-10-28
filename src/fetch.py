@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 
 from .datasources import FinMindClient, QuotaExceeded, TWSEClient
+from .datasources.finmind import AdjustmentDataUnavailable
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +67,10 @@ def fetch_all(
 
     - 增量更新：有快取時只抓新區間（往前重疊 5 天避免斷裂）。
     - 失敗策略：單一股票/資料集失敗只記錄警告，不中斷整體；全部失敗才報錯。
+    - 調整資料不可用：除權息表抓不到時，該檔直接列入 excluded_adjustment
+      並從 price_adj 排除，絕不以原始價混進還原序列；其餘股票照常處理。
+    - 配額用盡（QuotaExceeded）直接 re-raise（使用者定奪的 main 行為），
+      由上層決定保留前一次結果，不在此處改用快取續跑。
     """
     dcfg = cfg["data"]
     cache = Path(cache_dir or dcfg.get("cache_dir", "data/cache"))
@@ -80,6 +85,7 @@ def fetch_all(
     data: dict[str, dict[str, pd.DataFrame]] = {ds: {} for ds in DATASETS}
     data_dates: dict[str, str | None] = {}
     warnings: list[str] = []
+    excluded_adjustment: dict[str, str] = {}
     failed = 0
 
     for ds in DATASETS:
@@ -99,6 +105,20 @@ def fetch_all(
                     fresh = _fetch_dataset(client, ds, sid, fetch_start, end_date)
                 except QuotaExceeded:
                     raise
+                except AdjustmentDataUnavailable as e:
+                    if ds == "price_adj":
+                        # 調整資料不可用：該檔不得以原始價混入還原序列，
+                        # 也不用舊快取續命，直接排除（下游排除規則會接手）。
+                        reason = f"調整資料不可用：{e}"
+                        excluded_adjustment[sid] = reason
+                        warnings.append(f"{sid}/price_adj {reason}，已排除")
+                        log.warning("%s/%s 調整資料不可用，已排除：%s", sid, ds, e)
+                        continue
+                    # 其他資料集理論上不會拋出此例外；若發生，視為一般失敗。
+                    failed += 1
+                    warnings.append(f"{sid}/{ds} 抓取失敗：{e}")
+                    log.warning("%s/%s 抓取失敗：%s", sid, ds, e)
+                    fresh = pd.DataFrame()
                 except Exception as e:  # noqa: BLE001
                     failed += 1
                     warnings.append(f"{sid}/{ds} 抓取失敗：{e}")
@@ -145,6 +165,9 @@ def fetch_all(
         "index_close": index_close,
         "data_dates": data_dates,
         "warnings": warnings,
+        # 因調整資料不可用而排除的股票（附原因）；這些股票不在 price_adj 內，
+        # 因此 adjusted_price=True 僅描述「已納入的 price_adj 皆為還原價」，不再為缺席者背書。
+        "excluded_adjustment": excluded_adjustment,
         "source": "FinMind",
         "adjusted_price": True,
     }
