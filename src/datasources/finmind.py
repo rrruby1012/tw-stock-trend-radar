@@ -27,6 +27,13 @@ class QuotaExceeded(FinMindError):
     """FinMind 配額用盡（HTTP 402）。"""
 
 
+class AdjustmentDataUnavailable(FinMindError):
+    """除權息調整資料不可用：除權息表抓取失敗，無法確認該期間是否有除權息事件。
+
+    此時絕對不可把未還原價當成還原價使用；呼叫端應將該檔排除，而非靜默 fallback。
+    """
+
+
 class FinMindClient:
     def __init__(
         self,
@@ -150,8 +157,11 @@ class FinMindClient:
         try:
             div = self.dividend_result(stock_id, start_date, end_date)
         except Exception as e:  # noqa: BLE001
-            log.warning("%s 除權息表抓取失敗，改用未還原價：%s", stock_id, e)
-            return price
+            # 除權息表抓不到＝無法確認有無除權息事件；回傳未還原價會讓
+            # 模型把原始價誤當還原價用，因此必須大聲拋出、由呼叫端排除該檔。
+            raise AdjustmentDataUnavailable(
+                f"{stock_id} 除權息表抓取失敗，無法還原權息：{e}"
+            ) from e
 
         factors = []
         for _, r in div.iterrows():
@@ -182,7 +192,9 @@ class FinMindClient:
         # 保留官方原始收盤價供網站顯示；還原價只供模型計算
         if "close" in price.columns:
             adj["close_raw"] = price["close"]
-        for col in ["open", "high", "low", "close", "amount"]:
+        # 只有 OHLC 做還原調整；amount（成交金額）是已實現金額，
+        # 除權息調整因子只修正價格水準，不得乘上 amount。
+        for col in ["open", "high", "low", "close"]:
             if col in adj.columns:
                 adj[col] = adj[col] * ratios.values
         adj["adjusted"] = True
