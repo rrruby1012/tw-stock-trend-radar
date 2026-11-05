@@ -1,0 +1,1871 @@
+{
+ "data_class": "prospective",
+ "data_cutoff_date": "2026-11-05",
+ "prediction_sha256": "c8bfc72cfbe4ec86ae55468c2655b64de08a3657bed4200580a7cfd1c3b033aa",
+ "source_commit_sha": "d94ae33bed304015ec69f3ccbc8b8d4a322908cd",
+ "workflow_run_id": "42018562392",
+ "model_version": "logreg-isotonic-v2",
+ "config_version": "2026-10-29.1",
+ "generated_at": "2026-11-05T19:32:58.622902+08:00",
+ "published_at": "2026-11-05T19:33:01.550669+08:00",
+ "predictions": [
+  {
+   "symbol": "1101",
+   "name": "台泥",
+   "close": 27.2,
+   "close_raw": 27.2,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 25.31,
+    "hi": 29.09
+   },
+   "interval_20": {
+    "lo": 24.53,
+    "hi": 29.87
+   },
+   "downside_risk_10": -0.089,
+   "downside_risk_20": -0.126,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.549,
+   "oos_n": 840,
+   "max_drawdown": -0.151,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "1216",
+   "name": "統一",
+   "close": 80.9,
+   "close_raw": 80.9,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 77.4,
+    "hi": 84.4
+   },
+   "interval_20": {
+    "lo": 75.95,
+    "hi": 85.85
+   },
+   "downside_risk_10": -0.056,
+   "downside_risk_20": -0.079,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "月營收年增率為正",
+    "MACD動能為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.528,
+   "oos_n": 841,
+   "max_drawdown": -0.147,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "1301",
+   "name": "台塑",
+   "close": 65.1,
+   "close_raw": 65.1,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 56.08,
+    "hi": 74.12
+   },
+   "interval_20": {
+    "lo": 52.34,
+    "hi": 77.86
+   },
+   "downside_risk_10": -0.178,
+   "downside_risk_20": -0.252,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.489,
+   "oos_n": 841,
+   "max_drawdown": -0.268,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "1303",
+   "name": "南亞",
+   "close": 249.0,
+   "close_raw": 249.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 197.65,
+    "hi": 300.35
+   },
+   "interval_20": {
+    "lo": 176.38,
+    "hi": 321.62
+   },
+   "downside_risk_10": -0.265,
+   "downside_risk_20": -0.375,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.493,
+   "oos_n": 841,
+   "max_drawdown": -0.378,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "1326",
+   "name": "台化",
+   "close": 65.0,
+   "close_raw": 65.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 55.19,
+    "hi": 74.81
+   },
+   "interval_20": {
+    "lo": 51.13,
+    "hi": 78.87
+   },
+   "downside_risk_10": -0.194,
+   "downside_risk_20": -0.274,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.498,
+   "oos_n": 841,
+   "max_drawdown": -0.24,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "1402",
+   "name": "遠東新",
+   "close": 28.15,
+   "close_raw": 28.15,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 26.39,
+    "hi": 29.91
+   },
+   "interval_20": {
+    "lo": 25.66,
+    "hi": 30.64
+   },
+   "downside_risk_10": -0.08,
+   "downside_risk_20": -0.114,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.521,
+   "oos_n": 841,
+   "max_drawdown": -0.198,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2002",
+   "name": "中鋼",
+   "close": 18.95,
+   "close_raw": 18.95,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.43,
+   "p_exc_20": 0.409,
+   "interval_10": {
+    "lo": 18.18,
+    "hi": 19.72
+   },
+   "interval_20": {
+    "lo": 17.86,
+    "hi": 20.04
+   },
+   "downside_risk_10": -0.052,
+   "downside_risk_20": -0.074,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.512,
+   "oos_n": 841,
+   "max_drawdown": -0.148,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2105",
+   "name": "正新",
+   "close": 30.5,
+   "close_raw": 30.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.439,
+   "interval_10": {
+    "lo": 29.08,
+    "hi": 31.92
+   },
+   "interval_20": {
+    "lo": 28.49,
+    "hi": 32.51
+   },
+   "downside_risk_10": -0.06,
+   "downside_risk_20": -0.085,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.558,
+   "oos_n": 841,
+   "max_drawdown": -0.148,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2207",
+   "name": "和泰車",
+   "close": 537.0,
+   "close_raw": 537.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 505.07,
+    "hi": 568.93
+   },
+   "interval_20": {
+    "lo": 491.85,
+    "hi": 582.15
+   },
+   "downside_risk_10": -0.076,
+   "downside_risk_20": -0.108,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.493,
+   "oos_n": 840,
+   "max_drawdown": -0.266,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2301",
+   "name": "光寶科",
+   "close": 211.5,
+   "close_raw": 211.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 182.45,
+    "hi": 240.55
+   },
+   "interval_20": {
+    "lo": 170.41,
+    "hi": 252.59
+   },
+   "downside_risk_10": -0.177,
+   "downside_risk_20": -0.25,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "RSI低於30（短線超賣）"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線",
+    "MACD動能為負",
+    "近20日落後加權指數"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.536,
+   "oos_n": 841,
+   "max_drawdown": -0.334,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2303",
+   "name": "聯電",
+   "close": 98.4,
+   "close_raw": 98.4,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 83.39,
+    "hi": 113.41
+   },
+   "interval_20": {
+    "lo": 77.18,
+    "hi": 119.62
+   },
+   "downside_risk_10": -0.196,
+   "downside_risk_20": -0.277,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "RSI低於30（短線超賣）"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線",
+    "MACD動能為負",
+    "近20日落後加權指數"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.485,
+   "oos_n": 841,
+   "max_drawdown": -0.439,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2308",
+   "name": "台達電",
+   "close": 1130.0,
+   "close_raw": 1130.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.636,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 953.69,
+    "hi": 1306.31
+   },
+   "interval_20": {
+    "lo": 880.66,
+    "hi": 1379.34
+   },
+   "downside_risk_10": -0.201,
+   "downside_risk_20": -0.284,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "RSI低於30（短線超賣）"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線",
+    "MACD動能為負",
+    "近20日落後加權指數"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.459,
+   "oos_n": 841,
+   "max_drawdown": -0.549,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2317",
+   "name": "鴻海",
+   "close": 235.0,
+   "close_raw": 235.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.47,
+   "interval_10": {
+    "lo": 219.95,
+    "hi": 250.05
+   },
+   "interval_20": {
+    "lo": 213.71,
+    "hi": 256.29
+   },
+   "downside_risk_10": -0.082,
+   "downside_risk_20": -0.116,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.432,
+   "oos_n": 840,
+   "max_drawdown": -0.284,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2327",
+   "name": "國巨",
+   "close": 404.5,
+   "close_raw": 404.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.511,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 325.7,
+    "hi": 483.3
+   },
+   "interval_20": {
+    "lo": 293.06,
+    "hi": 515.94
+   },
+   "downside_risk_10": -0.25,
+   "downside_risk_20": -0.354,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "RSI低於30（短線超賣）"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線",
+    "MACD動能為負",
+    "近20日落後加權指數"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.498,
+   "oos_n": 834,
+   "max_drawdown": -0.645,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2330",
+   "name": "台積電",
+   "close": 2240.0,
+   "close_raw": 2240.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.43,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 2134.77,
+    "hi": 2345.23
+   },
+   "interval_20": {
+    "lo": 2091.19,
+    "hi": 2388.81
+   },
+   "downside_risk_10": -0.06,
+   "downside_risk_20": -0.085,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "RSI低於30（短線超賣）",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.466,
+   "oos_n": 841,
+   "max_drawdown": -0.133,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2357",
+   "name": "華碩",
+   "close": 867.0,
+   "close_raw": 867.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 769.83,
+    "hi": 964.17
+   },
+   "interval_20": {
+    "lo": 729.58,
+    "hi": 1004.42
+   },
+   "downside_risk_10": -0.144,
+   "downside_risk_20": -0.204,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.572,
+   "oos_n": 841,
+   "max_drawdown": -0.305,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2379",
+   "name": "瑞昱",
+   "close": 720.0,
+   "close_raw": 720.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 661.46,
+    "hi": 778.54
+   },
+   "interval_20": {
+    "lo": 637.21,
+    "hi": 802.79
+   },
+   "downside_risk_10": -0.104,
+   "downside_risk_20": -0.148,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.547,
+   "oos_n": 841,
+   "max_drawdown": -0.241,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2382",
+   "name": "廣達",
+   "close": 300.0,
+   "close_raw": 300.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 277.47,
+    "hi": 322.53
+   },
+   "interval_20": {
+    "lo": 268.13,
+    "hi": 331.87
+   },
+   "downside_risk_10": -0.097,
+   "downside_risk_20": -0.137,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.491,
+   "oos_n": 841,
+   "max_drawdown": -0.302,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2395",
+   "name": "研華",
+   "close": 596.0,
+   "close_raw": 596.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 537.62,
+    "hi": 654.38
+   },
+   "interval_20": {
+    "lo": 513.44,
+    "hi": 678.56
+   },
+   "downside_risk_10": -0.126,
+   "downside_risk_20": -0.178,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "RSI低於30（短線超賣）"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負",
+    "近20日落後加權指數"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.6,
+   "oos_n": 841,
+   "max_drawdown": -0.195,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2408",
+   "name": "南亞科",
+   "close": 360.0,
+   "close_raw": 360.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.636,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 295.26,
+    "hi": 424.74
+   },
+   "interval_20": {
+    "lo": 268.44,
+    "hi": 451.56
+   },
+   "downside_risk_10": -0.231,
+   "downside_risk_20": -0.327,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線",
+    "MACD動能為負",
+    "近20日落後加權指數"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.459,
+   "oos_n": 841,
+   "max_drawdown": -0.392,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2412",
+   "name": "中華電",
+   "close": 161.5,
+   "close_raw": 161.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 156.73,
+    "hi": 166.27
+   },
+   "interval_20": {
+    "lo": 154.75,
+    "hi": 168.25
+   },
+   "downside_risk_10": -0.038,
+   "downside_risk_20": -0.054,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "月營收年增率為正",
+    "MACD動能為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "RSI高於70（短線過熱）"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.548,
+   "oos_n": 841,
+   "max_drawdown": -0.057,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2454",
+   "name": "聯發科",
+   "close": 3460.0,
+   "close_raw": 3460.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 2955.75,
+    "hi": 3964.25
+   },
+   "interval_20": {
+    "lo": 2746.89,
+    "hi": 4173.11
+   },
+   "downside_risk_10": -0.187,
+   "downside_risk_20": -0.265,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "RSI低於30（短線超賣）"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線",
+    "MACD動能為負",
+    "近20日落後加權指數"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.535,
+   "oos_n": 841,
+   "max_drawdown": -0.345,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2474",
+   "name": "可成",
+   "close": 186.5,
+   "close_raw": 186.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.404,
+   "p_exc_20": 0.398,
+   "interval_10": {
+    "lo": 175.69,
+    "hi": 197.31
+   },
+   "interval_20": {
+    "lo": 171.22,
+    "hi": 201.78
+   },
+   "downside_risk_10": -0.074,
+   "downside_risk_20": -0.105,
+   "trend": "偏多",
+   "bull_signals": [
+    "RSI低於30（短線超賣）",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線",
+    "月營收年增率為負",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.499,
+   "oos_n": 841,
+   "max_drawdown": -0.281,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2603",
+   "name": "長榮",
+   "close": 259.0,
+   "close_raw": 259.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 234.63,
+    "hi": 283.37
+   },
+   "interval_20": {
+    "lo": 224.54,
+    "hi": 293.46
+   },
+   "downside_risk_10": -0.121,
+   "downside_risk_20": -0.171,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.592,
+   "oos_n": 841,
+   "max_drawdown": -0.177,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2609",
+   "name": "陽明",
+   "close": 60.0,
+   "close_raw": 60.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 53.64,
+    "hi": 66.36
+   },
+   "interval_20": {
+    "lo": 51.0,
+    "hi": 69.0
+   },
+   "downside_risk_10": -0.136,
+   "downside_risk_20": -0.193,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.548,
+   "oos_n": 841,
+   "max_drawdown": -0.272,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2615",
+   "name": "萬海",
+   "close": 113.0,
+   "close_raw": 113.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 97.54,
+    "hi": 128.46
+   },
+   "interval_20": {
+    "lo": 91.14,
+    "hi": 134.86
+   },
+   "downside_risk_10": -0.176,
+   "downside_risk_20": -0.249,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.581,
+   "oos_n": 841,
+   "max_drawdown": -0.159,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2801",
+   "name": "彰銀",
+   "close": 28.7,
+   "close_raw": 28.7,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 26.91,
+    "hi": 30.49
+   },
+   "interval_20": {
+    "lo": 26.17,
+    "hi": 31.23
+   },
+   "downside_risk_10": -0.08,
+   "downside_risk_20": -0.113,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.527,
+   "oos_n": 841,
+   "max_drawdown": -0.084,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2834",
+   "name": "臺企銀",
+   "close": 17.5,
+   "close_raw": 17.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.43,
+   "p_exc_20": 0.47,
+   "interval_10": {
+    "lo": 16.69,
+    "hi": 18.31
+   },
+   "interval_20": {
+    "lo": 16.35,
+    "hi": 18.65
+   },
+   "downside_risk_10": -0.06,
+   "downside_risk_20": -0.085,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.452,
+   "oos_n": 841,
+   "max_drawdown": -0.095,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2880",
+   "name": "華南金",
+   "close": 49.6,
+   "close_raw": 49.6,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 46.11,
+    "hi": 53.09
+   },
+   "interval_20": {
+    "lo": 44.67,
+    "hi": 54.53
+   },
+   "downside_risk_10": -0.09,
+   "downside_risk_20": -0.128,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.507,
+   "oos_n": 841,
+   "max_drawdown": -0.223,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2881",
+   "name": "富邦金",
+   "close": 155.5,
+   "close_raw": 155.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 143.42,
+    "hi": 167.58
+   },
+   "interval_20": {
+    "lo": 138.42,
+    "hi": 172.58
+   },
+   "downside_risk_10": -0.1,
+   "downside_risk_20": -0.141,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "月營收年增率為負",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.503,
+   "oos_n": 841,
+   "max_drawdown": -0.124,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2882",
+   "name": "國泰金",
+   "close": 112.0,
+   "close_raw": 112.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.439,
+   "interval_10": {
+    "lo": 103.7,
+    "hi": 120.3
+   },
+   "interval_20": {
+    "lo": 100.27,
+    "hi": 123.73
+   },
+   "downside_risk_10": -0.095,
+   "downside_risk_20": -0.135,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "月營收年增率為負",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.543,
+   "oos_n": 841,
+   "max_drawdown": -0.162,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2883",
+   "name": "開發金",
+   "close": 34.35,
+   "close_raw": 34.35,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 31.58,
+    "hi": 37.12
+   },
+   "interval_20": {
+    "lo": 30.43,
+    "hi": 38.27
+   },
+   "downside_risk_10": -0.104,
+   "downside_risk_20": -0.147,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "月營收年增率為負",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.568,
+   "oos_n": 841,
+   "max_drawdown": -0.151,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2884",
+   "name": "E.SUN玉山金",
+   "close": 47.95,
+   "close_raw": 47.95,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 44.64,
+    "hi": 51.26
+   },
+   "interval_20": {
+    "lo": 43.27,
+    "hi": 52.63
+   },
+   "downside_risk_10": -0.089,
+   "downside_risk_20": -0.125,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.543,
+   "oos_n": 840,
+   "max_drawdown": -0.125,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2885",
+   "name": "元大金",
+   "close": 69.1,
+   "close_raw": 69.1,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 64.83,
+    "hi": 73.37
+   },
+   "interval_20": {
+    "lo": 63.06,
+    "hi": 75.14
+   },
+   "downside_risk_10": -0.079,
+   "downside_risk_20": -0.112,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.539,
+   "oos_n": 841,
+   "max_drawdown": -0.12,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2886",
+   "name": "兆豐金",
+   "close": 54.0,
+   "close_raw": 54.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 50.55,
+    "hi": 57.45
+   },
+   "interval_20": {
+    "lo": 49.12,
+    "hi": 58.88
+   },
+   "downside_risk_10": -0.082,
+   "downside_risk_20": -0.116,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.558,
+   "oos_n": 841,
+   "max_drawdown": -0.104,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2891",
+   "name": "中信金",
+   "close": 74.9,
+   "close_raw": 74.9,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 70.15,
+    "hi": 79.65
+   },
+   "interval_20": {
+    "lo": 68.18,
+    "hi": 81.62
+   },
+   "downside_risk_10": -0.081,
+   "downside_risk_20": -0.115,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "月營收年增率為負",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.543,
+   "oos_n": 841,
+   "max_drawdown": -0.119,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2892",
+   "name": "第一金",
+   "close": 42.25,
+   "close_raw": 42.25,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 39.74,
+    "hi": 44.76
+   },
+   "interval_20": {
+    "lo": 38.71,
+    "hi": 45.79
+   },
+   "downside_risk_10": -0.076,
+   "downside_risk_20": -0.108,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "月營收年增率為負",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.553,
+   "oos_n": 841,
+   "max_drawdown": -0.095,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "2912",
+   "name": "統一超",
+   "close": 214.5,
+   "close_raw": 214.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.439,
+   "interval_10": {
+    "lo": 206.56,
+    "hi": 222.44
+   },
+   "interval_20": {
+    "lo": 203.27,
+    "hi": 225.73
+   },
+   "downside_risk_10": -0.048,
+   "downside_risk_20": -0.067,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.497,
+   "oos_n": 841,
+   "max_drawdown": -0.167,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "3008",
+   "name": "大立光",
+   "close": 4525.0,
+   "close_raw": 4525.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.511,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 3574.37,
+    "hi": 5475.63
+   },
+   "interval_20": {
+    "lo": 3180.6,
+    "hi": 5869.4
+   },
+   "downside_risk_10": -0.27,
+   "downside_risk_20": -0.382,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "RSI低於30（短線超賣）"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "月營收年增率為負",
+    "MACD動能為負",
+    "近20日落後加權指數"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.565,
+   "oos_n": 841,
+   "max_drawdown": -0.421,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "3034",
+   "name": "聯詠",
+   "close": 510.0,
+   "close_raw": 510.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 467.04,
+    "hi": 552.96
+   },
+   "interval_20": {
+    "lo": 449.25,
+    "hi": 570.75
+   },
+   "downside_risk_10": -0.108,
+   "downside_risk_20": -0.153,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.58,
+   "oos_n": 841,
+   "max_drawdown": -0.156,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "3037",
+   "name": "欣興",
+   "close": 800.0,
+   "close_raw": 800.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 658.73,
+    "hi": 941.27
+   },
+   "interval_20": {
+    "lo": 600.22,
+    "hi": 999.78
+   },
+   "downside_risk_10": -0.227,
+   "downside_risk_20": -0.321,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "RSI低於30（短線超賣）"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負",
+    "近20日落後加權指數"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.454,
+   "oos_n": 841,
+   "max_drawdown": -0.396,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "3045",
+   "name": "台灣大",
+   "close": 132.5,
+   "close_raw": 132.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 126.36,
+    "hi": 138.64
+   },
+   "interval_20": {
+    "lo": 123.82,
+    "hi": 141.18
+   },
+   "downside_risk_10": -0.06,
+   "downside_risk_20": -0.084,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.543,
+   "oos_n": 841,
+   "max_drawdown": -0.071,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "3711",
+   "name": "日月光投控",
+   "close": 572.0,
+   "close_raw": 572.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 492.05,
+    "hi": 651.95
+   },
+   "interval_20": {
+    "lo": 458.93,
+    "hi": 685.07
+   },
+   "downside_risk_10": -0.18,
+   "downside_risk_20": -0.254,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負",
+    "近20日落後加權指數"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.507,
+   "oos_n": 841,
+   "max_drawdown": -0.307,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "4938",
+   "name": "和碩",
+   "close": 97.2,
+   "close_raw": 97.2,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 88.2,
+    "hi": 106.2
+   },
+   "interval_20": {
+    "lo": 84.48,
+    "hi": 109.92
+   },
+   "downside_risk_10": -0.119,
+   "downside_risk_20": -0.168,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.511,
+   "oos_n": 841,
+   "max_drawdown": -0.151,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "5880",
+   "name": "合庫金",
+   "close": 28.5,
+   "close_raw": 28.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 27.14,
+    "hi": 29.86
+   },
+   "interval_20": {
+    "lo": 26.58,
+    "hi": 30.42
+   },
+   "downside_risk_10": -0.061,
+   "downside_risk_20": -0.087,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "MACD動能為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "月營收年增率為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.492,
+   "oos_n": 841,
+   "max_drawdown": -0.093,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "6446",
+   "name": "藥華藥",
+   "close": 1185.0,
+   "close_raw": 1185.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 1012.61,
+    "hi": 1357.39
+   },
+   "interval_20": {
+    "lo": 941.2,
+    "hi": 1428.8
+   },
+   "downside_risk_10": -0.187,
+   "downside_risk_20": -0.264,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "MACD動能為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.501,
+   "oos_n": 841,
+   "max_drawdown": -0.274,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "6505",
+   "name": "台塑化",
+   "close": 87.9,
+   "close_raw": 87.9,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.486,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 72.4,
+    "hi": 103.4
+   },
+   "interval_20": {
+    "lo": 65.98,
+    "hi": 109.82
+   },
+   "downside_risk_10": -0.227,
+   "downside_risk_20": -0.32,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.508,
+   "oos_n": 841,
+   "max_drawdown": -0.282,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "8454",
+   "name": "富邦媒",
+   "close": 228.5,
+   "close_raw": 228.5,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.47,
+   "interval_10": {
+    "lo": 209.99,
+    "hi": 247.01
+   },
+   "interval_20": {
+    "lo": 202.32,
+    "hi": 254.68
+   },
+   "downside_risk_10": -0.104,
+   "downside_risk_20": -0.147,
+   "trend": "偏多",
+   "bull_signals": [
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "股價跌破20日均線",
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.454,
+   "oos_n": 841,
+   "max_drawdown": -0.48,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "9904",
+   "name": "寶成",
+   "close": 26.0,
+   "close_raw": 26.0,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.53,
+   "interval_10": {
+    "lo": 24.65,
+    "hi": 27.35
+   },
+   "interval_20": {
+    "lo": 24.1,
+    "hi": 27.9
+   },
+   "downside_risk_10": -0.067,
+   "downside_risk_20": -0.094,
+   "trend": "偏多",
+   "bull_signals": [
+    "20日均線向上穿越60日均線（中期趨勢向上）",
+    "股價站上20日均線",
+    "月營收年增率為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "MACD動能為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.444,
+   "oos_n": 841,
+   "max_drawdown": -0.232,
+   "adjusted_price": true,
+   "price_warning": null
+  },
+  {
+   "symbol": "9910",
+   "name": "豐泰",
+   "close": 69.2,
+   "close_raw": 69.2,
+   "price_date": "2026-11-05",
+   "p_up_10": 0.609,
+   "p_up_20": 0.693,
+   "p_exc_10": 0.457,
+   "p_exc_20": 0.439,
+   "interval_10": {
+    "lo": 64.47,
+    "hi": 73.93
+   },
+   "interval_20": {
+    "lo": 62.5,
+    "hi": 75.9
+   },
+   "downside_risk_10": -0.088,
+   "downside_risk_20": -0.124,
+   "trend": "偏多",
+   "bull_signals": [
+    "股價站上20日均線",
+    "MACD動能為正",
+    "近20日跑贏加權指數"
+   ],
+   "bear_signals": [
+    "20日均線向下跌破60日均線（中期趨勢向下）",
+    "月營收年增率為負"
+   ],
+   "invalidation": "若收盤跌破60日均線，或10日上漲機率估計值跌破0.4，本次趨勢判斷失效。",
+   "hit_rate_10": 0.491,
+   "oos_n": 841,
+   "max_drawdown": -0.489,
+   "adjusted_price": true,
+   "price_warning": null
+  }
+ ]
+}
