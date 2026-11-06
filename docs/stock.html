@@ -126,6 +126,19 @@
     section("實驗區・未驗證");
     var c = card();
     c.classList.add("lab-zone");
+    // 輸出退化時（2026-11-05 止血）：不顯示趨勢徽章，改顯示
+    // 「模型輸出失去辨識度」；規則式訊號為特徵衍生、非模型機率，
+    // 仍由 renderSignals 附進本卡片，但不構成方向推薦。
+    if (window.__modelDegenerate === true) {
+      var dw = App.el("div", "alert danger");
+      dw.appendChild(App.el("strong", "", "模型輸出失去辨識度"));
+      dw.appendChild(App.el("div", "",
+        "本次模型輸出的機率幾乎全數相同，無法區分個股差異，不提供任何方向標示、排名或推薦。"));
+      c.appendChild(dw);
+      c.appendChild(App.el("p", "small muted",
+        "模型輸出退化，本區不顯示定性標示；下方僅列特徵衍生的規則式訊號供研究對照，不構成買賣建議。"));
+      return c;
+    }
     var line = App.el("div", "kv", "");
     line.appendChild(App.el("span", "k", "定性標示（實驗・未驗證）"));
     var v = App.el("span", "v");
@@ -313,6 +326,8 @@
     var mr = rs[0], ledger = rs[1];
     var meta = (mr.ok && mr.data) || {};
     window.__modelValid = meta.model_valid !== false;
+    // 輸出退化旗標（2026-11-05 止血）：實驗區據此隱藏趨勢徽章。
+    window.__modelDegenerate = meta.model_output_degenerate === true;
     document.getElementById("f-disclaimer").textContent = App.text(meta.risk_disclaimer);
     document.getElementById("footer").style.display = "";
     var zone = document.getElementById("alert-zone");
@@ -353,6 +368,14 @@
         a.appendChild(App.el("div", "", "以下機率僅為未通過驗證的模型輸出，請勿作為決策依據。"));
       }
       zone.appendChild(a);
+      // 輸出退化（2026-11-05 止血）：另立警示，不顯示方向標示。
+      if (meta.model_output_degenerate) {
+        var d = App.el("div", "alert danger");
+        d.appendChild(App.el("strong", "", "模型輸出失去辨識度"));
+        d.appendChild(App.el("div", "",
+          "本次模型輸出的機率幾乎全數相同，無法區分個股差異，因此本站不顯示任何個股方向、排名或推薦。收盤價與資料日期照常顯示。"));
+        zone.appendChild(d);
+      }
     }
 
     App.fetchJSON(predPath).then(function (pr) {
