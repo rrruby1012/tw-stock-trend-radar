@@ -8,8 +8,11 @@ project:
   version: "0.1.0"
   timezone: "Asia/Taipei"
   # 發布 provenance 用（寫入 ledger 與 meta.provenance；變更模型或設定時須同步更新）
-  model_version: "logreg-isotonic-v2"
-  config_version: "2026-10-29.1"
+  # 2026-11-05：isotonic 校準塌縮修正——改用 sigmoid（Platt）校準，
+  # 同步修正三大法人淨額大小寫錯誤（見 finmind.py），故版本升至 v3。
+  # 舊發布紀錄維持原版本（v1/v2），絕不改寫。
+  model_version: "logreg-sigmoid-v3"
+  config_version: "2026-11-05.1"
 
 # ---------- 預測目標 ----------
 horizons:
@@ -85,8 +88,14 @@ model:
     embargo_days: 20           # 訓練/測試間隔離，避免標籤重疊洩漏
     n_splits_min: 8
   # 機率校準
+  # 2026-11-05：isotonic 改為 sigmoid。診斷證實 isotonic 的階梯平台
+  # 會把 50 檔不同原始分數壓成 1~4 種值（11/05 全為 0.609），且逐折
+  # AUC 因大量平手由 0.622 跌至 0.536；sigmoid 為嚴格遞增的平滑映射，
+  # 保留全部排序，樣本外 Brier 相當（0.2516 vs 0.2515）、校準誤差較佳
+  # （ECE 0.0227 vs 0.0274）。兩者皆未通過可信度閘門，模型仍為
+  # credible=false，換校準器不等於模型變可信。
   calibration:
-    method: "isotonic"         # isotonic / sigmoid
+    method: "sigmoid"          # isotonic / sigmoid
     min_calibration_samples: 200
 
 # 模型可信度門檻：樣本外必須優於基準才顯示為可信預測
