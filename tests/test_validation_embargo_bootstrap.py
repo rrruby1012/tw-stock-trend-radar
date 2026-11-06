@@ -108,7 +108,7 @@ def test_train_final_and_predict_smoke_with_embargo(panel_small, small_cfg):
     )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    results, max_date = mod.train_final_and_predict(
+    results, max_date, health = mod.train_final_and_predict(
         panel_small, F.feature_columns(panel_small), small_cfg
     )
     assert "up_10" in results
@@ -116,6 +116,9 @@ def test_train_final_and_predict_smoke_with_embargo(panel_small, small_cfg):
     assert len(proba) == 3
     assert ((proba >= 0) & (proba <= 1)).all()
     assert max_date == panel_small.index.get_level_values("date").max()
+    # 2026-11-05 起回傳第三項：輸出健康檢查結果（dict，含 degenerate 旗標）。
+    assert isinstance(health, dict) and "degenerate" in health
+    assert "cause" in health and "targets" in health
 
 
 # ---------------- (b) bootstrap CI 形狀 ----------------
