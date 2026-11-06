@@ -75,8 +75,23 @@ def _source_commit_sha(root: Path) -> str:
 
 
 def train_final_and_predict(panel: pd.DataFrame, feature_cols: list[str], cfg: dict):
-    """在全量資料上訓練最終模型（留 embargo），預測每個股票最新一列。"""
+    """在全量資料上訓練最終模型（留 embargo），預測每個股票最新一列。
+
+    回傳 (proba_series, max_date, health)：
+    - proba_series：每目標的校準後機率（Series，以 stock_id 為 index）。
+    - health：src.output_health.check_prediction_health 的結果，逐目標
+      比對「校準前機率 / 校準後機率 / 校準器範圍 / 最新特徵列」，
+      判定整批輸出是否退化（全同、近零變異、排序損失、超出校準範圍）
+      及其原因分類（特徵塌縮 / 上游塌縮 / 校準飽和 / 校準樣本不足）。
+      呼叫方在 health["degenerate"] 為真時，必須把 model_valid 與
+      credible 強制為 false，並把退化狀態寫入 meta 與 ledger
+      provenance；絕不得以亂數、人工展開或重新縮放製造表面差異。
+    注意：校準方法由 config model.calibration.method 決定
+    （2026-11-05 起為 sigmoid；舊 isotonic 會塌縮，見 output_health
+    模組說明）。此處不得寫死校準方法。
+    """
     from src.models import TARGETS, CalibratedModel, LogisticModel
+    from src.output_health import check_prediction_health
 
     # 防禦：排除標籤欄（避免目標洩漏；與 validation.walk_forward 一致）
     label_cols = set(TARGETS) | {"fwd_ret_10", "fwd_ret_20"}
@@ -87,6 +102,9 @@ def train_final_and_predict(panel: pd.DataFrame, feature_cols: list[str], cfg: d
     vcfg = cfg["model"]["validation"]
     embargo = vcfg.get("embargo_days", 20)
     lr_cfg = cfg["model"]["logistic_regression"]
+    cal_method = (cfg.get("model", {}).get("calibration", {}) or {}).get("method", "isotonic")
+    min_cal_samples = int(
+        (cfg.get("model", {}).get("calibration", {}) or {}).get("min_calibration_samples", 200))
 
     dates = panel.index.get_level_values("date").unique().sort_values()
     max_date = dates.max()
@@ -94,6 +112,8 @@ def train_final_and_predict(panel: pd.DataFrame, feature_cols: list[str], cfg: d
 
     latest_idx = panel.groupby(level="stock_id").tail(1).index
     results = {}
+    health_inputs: dict[str, dict] = {}
+    latest_features = None
     for target in TARGETS:
         df = panel.dropna(subset=[target] + feature_cols).copy()
         if df.empty:
@@ -126,12 +146,28 @@ def train_final_and_predict(panel: pd.DataFrame, feature_cols: list[str], cfg: d
             max_iter=lr_cfg.get("max_iter", 1000),
             class_weight=lr_cfg.get("class_weight", "balanced"),
         )
-        model = CalibratedModel(est).fit(X_fit, y_fit, X_cal, y_cal)
+        model = CalibratedModel(
+            est, method=cal_method, min_calibration_samples=min_cal_samples,
+        ).fit(X_fit, y_fit, X_cal, y_cal)
         X_latest = panel.loc[latest_idx, feature_cols]
+        if latest_features is None:
+            latest_features = X_latest
+        # 健康檢查需要「校準前後」兩組機率：底層 logistic 輸出與校準後輸出。
+        pre_proba = est.predict_proba(X_latest)
         proba = model.predict_proba(X_latest)
         results[target] = pd.Series(proba, index=X_latest.index.get_level_values("stock_id"))
+        health_inputs[target] = {
+            "pre": pre_proba,
+            "post": proba,
+            "calibrator": model.calibrator_,
+            "calibrated": bool(model.calibrated_),
+        }
         log.info("%s 最終模型訓練完成，預測 %d 檔", target, len(results[target]))
-    return results, max_date
+    health = check_prediction_health(health_inputs, latest_features=latest_features)
+    if health["degenerate"]:
+        log.warning("模型輸出退化（原因：%s）：%s",
+                    health["cause"], "；".join(health["reasons"]))
+    return results, max_date, health
 
 
 def main() -> int:
@@ -214,8 +250,16 @@ def main() -> int:
         val_results, panel, fetched["index_close"], cfg, credible=credible
     )
 
-    # 8. 最終預測
-    proba_series, max_pred_date = train_final_and_predict(panel, feature_cols, cfg)
+    # 8. 最終預測（含輸出健康檢查）
+    proba_series, max_pred_date, output_health = train_final_and_predict(panel, feature_cols, cfg)
+    # 安全止血：輸出退化時強制不可信（即使 walk-forward 門檻碰巧通過，
+    # 整批機率失去辨識度的輸出也不得呈現方向）。收盤價、資料日期與
+    # ledger 累積照常顯示；退化狀態寫入 meta 與 provenance。
+    degenerate = bool(output_health.get("degenerate"))
+    if degenerate:
+        credible = False
+        log.warning("輸出退化，已強制 model_valid=false（原因：%s）",
+                    output_health.get("cause"))
 
     # 9. 產生網站
     up10m = val_results["targets"]["up_10"]["metrics"]
@@ -235,6 +279,22 @@ def main() -> int:
         "model_valid": bool(credible),
         "validation_status": val_status,
         "credibility_reasons": reasons,
+        # 輸出健康檢查（B 階段止血）：退化時 model_valid 已於上方強制為
+        # false；此處原樣寫入判定、原因與統計，前端據此顯示
+        # 「模型輸出失去辨識度」，實驗區不得顯示偏多、偏空、排名或推薦。
+        "model_output_degenerate": degenerate,
+        "model_output_health": {
+            "cause": output_health.get("cause"),
+            "reasons": output_health.get("reasons", []),
+            "targets": {
+                t: {"pre": d["pre"], "post": d["post"],
+                    "tie_fraction": d["tie_fraction"],
+                    "spearman_pre_post": d["spearman_pre_post"],
+                    "out_of_range_fraction": d["out_of_range_fraction"],
+                    "isotonic": d["isotonic"], "calibrated": d["calibrated"]}
+                for t, d in (output_health.get("targets") or {}).items()
+            },
+        },
         # 前端「模型驗證摘要」與頁尾樣本數讀取此欄位（缺值時前端顯示「資料暫無」）
         "credibility": {
             "target": "up_10",
@@ -254,6 +314,9 @@ def main() -> int:
         "config_version": cfg.get("project", {}).get("config_version"),
         "source_commit_sha": _source_commit_sha(root),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
+        # 退化狀態記入 provenance（新紀錄才有此欄；既有 ledger 紀錄不改寫）。
+        "model_output_degenerate": degenerate,
+        "model_output_cause": output_health.get("cause"),
     }
     generate_site(
         panel=panel,
@@ -333,6 +396,10 @@ def main() -> int:
         workflow_run_id=provenance["workflow_run_id"],
         model_version=provenance["model_version"],
         config_version=provenance["config_version"],
+        # 退化狀態隨新發布紀錄凍結（既有紀錄不改寫；退化日的紀錄仍計入
+        # 前瞻累積——當日預測確實發布過，只是輸出失去辨識度，須留痕）。
+        model_output_degenerate=degenerate,
+        model_output_cause=output_health.get("cause"),
     )
     ledger_dir = docs_dir / "data" / "ledger"
     try:
