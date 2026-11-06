@@ -216,9 +216,16 @@ class FinMindClient:
             return df
         df["stock_id"] = df["stock_id"].astype(str)
 
+        # 注意（2026-11-05 診斷）：FinMind 回傳的買賣欄位是小寫 buy/sell
+        # （例如 Foreign_Investor_buy），舊程式以大寫 "Buy"/"Sell" 比對，
+        # 永遠比對不到，導致 foreign_net / trust_net / dealer_net 全為 0，
+        # 下游 7 個籌碼特徵（inst_*_5/20、inst_streak）全部死亡為常數。
+        # 此處一律以小寫比對，避免欄位大小寫再次讓淨額靜默歸零。
         def net(prefix: str) -> pd.Series:
-            buy_candidates = [c for c in df.columns if c.startswith(prefix) and "Buy" in c]
-            sell_candidates = [c for c in df.columns if c.startswith(prefix) and "Sell" in c]
+            buy_candidates = [c for c in df.columns
+                              if c.lower().startswith(prefix.lower()) and "buy" in c.lower()]
+            sell_candidates = [c for c in df.columns
+                               if c.lower().startswith(prefix.lower()) and "sell" in c.lower()]
             buy = df[buy_candidates].apply(pd.to_numeric, errors="coerce").sum(axis=1) if buy_candidates else 0
             sell = df[sell_candidates].apply(pd.to_numeric, errors="coerce").sum(axis=1) if sell_candidates else 0
             return buy - sell
@@ -226,10 +233,12 @@ class FinMindClient:
         # 外資 / 投信 / 自營商（含 2014-12-01 前後欄位切分：Dealer、Dealer_self、Dealer_Hedging）
         df["foreign_net"] = net("Foreign_Investor")
         df["trust_net"] = net("Investment_Trust")
-        dealer_cols = [c for c in df.columns if "Dealer" in c and ("Buy" in c or "Sell" in c)]
+        dealer_cols = [c for c in df.columns
+                       if "dealer" in c.lower() and ("buy" in c.lower() or "sell" in c.lower())]
         if dealer_cols:
-            buy = df[[c for c in dealer_cols if "Buy" in c]].apply(pd.to_numeric, errors="coerce").sum(axis=1)
-            sell = df[[c for c in dealer_cols if "Sell" in c]].apply(pd.to_numeric, errors="coerce").sum(axis=1)
+            # 同上：欄位為小寫 buy/sell，必須以小寫比對（否則買賣合計為空）。
+            buy = df[[c for c in dealer_cols if "buy" in c.lower()]].apply(pd.to_numeric, errors="coerce").sum(axis=1)
+            sell = df[[c for c in dealer_cols if "sell" in c.lower()]].apply(pd.to_numeric, errors="coerce").sum(axis=1)
             df["dealer_net"] = buy - sell
         else:
             df["dealer_net"] = 0.0
