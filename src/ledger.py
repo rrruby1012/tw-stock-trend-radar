@@ -96,6 +96,11 @@ def build_publication_record(
     workflow_run_id: str | None,
     model_version: str,
     config_version: str,
+    # 輸出健康狀態（2026-11-05 新增，僅新紀錄攜帶；既有紀錄不改寫）。
+    # 退化日的紀錄仍照常凍結與計入前瞻累積（當日預測確實發布過），
+    # 只是以此欄留痕，供日後稽核時區分「正常發布」與「退化發布」。
+    model_output_degenerate: bool = False,
+    model_output_cause: str | None = None,
 ) -> dict:
     """組裝發布紀錄。刻意不含 publication_commit_sha（自我參照不可能）。"""
     return {
@@ -108,6 +113,8 @@ def build_publication_record(
         "config_version": config_version,
         "generated_at": generated_at,
         "published_at": published_at,
+        "model_output_degenerate": bool(model_output_degenerate),
+        "model_output_cause": model_output_cause,
         "predictions": predictions,
     }
 
