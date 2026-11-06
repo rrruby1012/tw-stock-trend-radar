@@ -144,6 +144,15 @@
           "樣本外驗證結果未優於基準模型，因此本站不顯示預測排行榜。以下僅提供市場資料與歷史統計，不構成投資建議。"));
       }
       zone.appendChild(a);
+      // 輸出退化（2026-11-05 止血）：機率失去辨識度時另立警示，
+      // 實驗區不得顯示偏多、偏空、排名或推薦；收盤價與資料日期照常顯示。
+      if (meta.model_output_degenerate) {
+        var d = App.el("div", "alert danger");
+        d.appendChild(App.el("strong", "", "模型輸出失去辨識度"));
+        d.appendChild(App.el("div", "",
+          "本次模型輸出的機率幾乎全數相同，無法區分個股差異，因此本站不顯示任何個股方向、排名或推薦。收盤價、資料日期與真實前瞻累積照常顯示。"));
+        zone.appendChild(d);
+      }
       return false;
     }
     return true;
@@ -310,17 +319,28 @@
     host.appendChild(warn);
 
     // 實驗區：僅定性標示（趨勢）＋市場資料（收盤價），靜態表、無排序/篩選控制
+    // 輸出退化時（2026-11-05 止血）：不顯示趨勢欄，改顯示「模型輸出失去辨識度」。
     var labSec = document.getElementById("lab-section");
     labSec.style.display = "";
     var labHost = document.getElementById("lab-table");
     labHost.innerHTML = "";
+    if (meta.model_output_degenerate) {
+      var dw = App.el("div", "alert danger");
+      dw.appendChild(App.el("strong", "", "模型輸出失去辨識度"));
+      dw.appendChild(App.el("div", "",
+        "本次模型輸出的機率幾乎全數相同，無法區分個股差異，不提供任何方向標示、排名或推薦。下方僅列收盤價等市場資料。"));
+      labHost.appendChild(dw);
+    }
     var cols = [
       { key: "symbol", label: "代號 / 名稱", sortable: false, render: symCell },
       { key: "close", label: "收盤（官方原始）", sortable: false,
-        render: function (r) { return App.el("span", "num", App.fmtPrice(r.close_raw != null ? r.close_raw : r.close)); } },
-      { key: "trend", label: "定性標示（實驗・未驗證）", sortable: false,
-        render: function (r) { return App.trendBadge(r.trend); } }
+        render: function (r) { return App.el("span", "num", App.fmtPrice(r.close_raw != null ? r.close_raw : r.close)); } }
     ];
+    if (!meta.model_output_degenerate) {
+      cols.push(
+        { key: "trend", label: "定性標示（實驗・未驗證）", sortable: false,
+          render: function (r) { return App.trendBadge(r.trend); } });
+    }
     var rows = preds.slice().sort(function (a, b) {
       return String(a.symbol).localeCompare(String(b.symbol));
     });
