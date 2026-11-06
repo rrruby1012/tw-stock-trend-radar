@@ -120,6 +120,13 @@ def generate_site(
             trend_p20 if trend_p20 is not None else 0.5,
             tcfg["bullish_threshold"], tcfg["bearish_threshold"],
         )
+        # 安全止血（2026-11-05）：輸出退化時不得寫入任何方向標示。
+        # 機率欄位仍原樣輸出供查核，但 trend 一律為「未提供」，避免
+        # 退化機率（例如 50 檔全為同一值）被解讀為「全體偏多」。
+        # 前端在 meta.model_output_degenerate 為真時，實驗區改顯示
+        # 「模型輸出失去辨識度」，不顯示趨勢欄。
+        if meta.get("model_output_degenerate"):
+            trend = "未提供"
         bull, bear, invalidation = derive_signals(latest)
 
         # 該股樣本外命中率
