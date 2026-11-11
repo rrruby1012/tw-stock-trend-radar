@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from pathlib import Path
 
 import numpy as np
@@ -15,6 +16,125 @@ def _r(x, nd=3):
     if x is None or (isinstance(x, float) and (np.isnan(x) or np.isinf(x))):
         return None
     return round(float(x), nd)
+
+
+def _jsonable(obj):
+    """把物件轉為 JSON 安全結構（遞迴）。
+
+    - numpy 純量（整數／浮點／布林）→ Python 原生型別；numpy 陣列 → list。
+    - dict 鍵：numpy 整數鍵 → int（例如 baselines 的 auc_per_fold 折號），
+      非 str/int/float/bool/None 鍵 → str。
+    - datetime → ISO 日期字串；NaN/Inf 浮點 → None（不得寫入非標準 JSON；
+      2026-10-14/15 存檔的 close_raw NaN 即為此類問題的前例）。
+    - 其餘無法序列化者 → str（最後防線，不讓報告寫檔失敗）。
+    """
+    if obj is None or isinstance(obj, (str, bool, int, float)):
+        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+            return None
+        return obj
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        v = float(obj)
+        return None if (math.isnan(v) or math.isinf(v)) else v
+    if isinstance(obj, (np.bool_,)):
+        return bool(obj)
+    if isinstance(obj, np.ndarray):
+        return [_jsonable(v) for v in obj.tolist()]
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if isinstance(k, (np.integer,)):
+                k = int(k)
+            elif isinstance(k, (np.floating,)):
+                k = float(k)
+            elif isinstance(k, (np.bool_,)):
+                k = bool(k)
+            elif not isinstance(k, (str, int, float, bool)) and k is not None:
+                k = str(k)
+            out[k] = _jsonable(v)
+        return out
+    if isinstance(obj, (list, tuple)):
+        return [_jsonable(v) for v in obj]
+    if hasattr(obj, "strftime"):
+        try:
+            return obj.strftime("%Y-%m-%d")
+        except Exception:  # noqa: BLE001
+            return str(obj)
+    if hasattr(obj, "item"):
+        try:
+            return _jsonable(obj.item())
+        except Exception:  # noqa: BLE001
+            pass
+    return str(obj)
+
+
+# 驗證報告各期指標欄位（walk_forward 以扁平欄位回傳；報告輸出時收進
+# "metrics"，避免空 metrics 結構。其餘日期／區間欄位留在上層）。
+_PERIOD_METRIC_KEYS = frozenset({
+    "n", "base_rate", "hit_rate", "brier", "auc",
+    "hit_rate_always", "brier_always", "auc_always",
+    "hit_rate_mom", "brier_mom", "auc_mom",
+})
+
+
+def _period_out(p: dict) -> dict:
+    """單一驗證期間的輸出：描述欄位留在上層，指標欄位收進巢狀 "metrics"。
+
+    walk_forward 回傳的期間字典把指標扁平放在上層（n、auc、brier、…）；
+    舊輸出程式誤以 p.get("metrics", {}) 取巢狀值，結果永遠寫出空物件。
+    此處把指標鍵收進 "metrics"，描述鍵（fold、起訖日期、fit/cal 切分、
+    train_base_rate）留在上層；上游若已給巢狀 metrics，直接沿用其內容。
+    """
+    desc: dict = {}
+    metrics: dict = {}
+    for k, v in (p or {}).items():
+        if k == "metrics":
+            if isinstance(v, dict):
+                for kk, vv in v.items():
+                    metrics[kk] = _r(vv) if isinstance(vv, float) else vv
+            continue
+        v2 = v.strftime("%Y-%m-%d") if hasattr(v, "strftime") else v
+        if k in _PERIOD_METRIC_KEYS:
+            metrics[k] = _r(v2) if isinstance(v2, float) else v2
+        else:
+            desc[k] = v2
+    desc["metrics"] = metrics
+    return desc
+
+
+def build_validation_report(val_results: dict, backtest_results: dict,
+                            credible: bool) -> dict:
+    """組裝 validation.json 的內容（純函數，供測試直接呼叫）。
+
+    保留內容（2026-11-11 補齊；此前只保留 metrics、periods）：
+    - 每目標的 metrics（既有鍵不動）與 periods。
+    - 每目標的 baselines（四基準：const05 固定 0.5、climatology 訓練窗
+      氣候基準率、always_up_rule 恆多規則、momentum 動能基準；各有獨立
+      數值與來源說明，互不覆蓋）與 bootstrap_ci（日期區塊 bootstrap 的
+      CI、gate_pass、不可計算原因）。
+    - 每目標頂層 gate_pass（取自 bootstrap_ci；bootstrap_ci 缺失時為 None，
+      表示「未計算」，不得當作通過）。
+    - periods 的指標欄位收進巢狀 "metrics"（此前誤寫為空物件）；上游若已
+      給巢狀 metrics，直接沿用。
+    既有統計門檻不動；本函數只決定「報告寫什麼」，不改變任何判定。
+    舊假資料／舊報告缺 baselines、bootstrap_ci 時寫 None（表示未計算），
+    不得以 metrics 的混池值冒充。
+    """
+    val_out = {"credible": bool(credible), "targets": {}}
+    for t, tres in (val_results.get("targets") or {}).items():
+        boot = tres.get("bootstrap_ci")
+        val_out["targets"][t] = {
+            "metrics": {k: _r(v) if isinstance(v, float) else v
+                        for k, v in (tres.get("metrics") or {}).items()},
+            "baselines": _jsonable(tres.get("baselines")),
+            "bootstrap_ci": _jsonable(boot),
+            "gate_pass": (boot.get("gate_pass")
+                          if isinstance(boot, dict) else None),
+            "periods": [_period_out(p) for p in (tres.get("periods") or [])],
+        }
+    val_out["backtest"] = backtest_results
+    return val_out
 
 
 def derive_signals(feat: pd.Series) -> tuple[list[str], list[str], str]:
@@ -208,21 +328,10 @@ def generate_site(
         json.dumps(predictions, ensure_ascii=False), encoding="utf-8"
     )
 
-    # 驗證結果
-    val_out = {"credible": bool(meta.get("model_valid")), "targets": {}}
-    for t, tres in val_results["targets"].items():
-        val_out["targets"][t] = {
-            "metrics": {k: _r(v) if isinstance(v, float) else v
-                        for k, v in tres["metrics"].items()},
-            "periods": [
-                {**{k: (v.strftime("%Y-%m-%d") if hasattr(v, "strftime") else v)
-                      for k, v in p.items() if k != "metrics"},
-                 "metrics": {kk: _r(vv) if isinstance(vv, float) else vv
-                             for kk, vv in p.get("metrics", {}).items()}}
-                for p in tres.get("periods", [])
-            ],
-        }
-    val_out["backtest"] = backtest_results
+    # 驗證結果（見 build_validation_report：保留四基準、bootstrap CI、
+    # gate_pass 與各期巢狀 metrics；既有統計門檻不動）
+    val_out = build_validation_report(val_results, backtest_results,
+                                      meta.get("model_valid"))
     (data_dir / "validation.json").write_text(
         json.dumps(val_out, ensure_ascii=False, default=str), encoding="utf-8"
     )
