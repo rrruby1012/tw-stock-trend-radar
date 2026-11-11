@@ -22,6 +22,7 @@ import pandas as pd
 from sklearn.metrics import brier_score_loss, roc_auc_score
 
 from .config import get
+from .ledger import count_nonoverlap_blocks
 from .models import (
     TARGETS,
     AlwaysUpBaseline,
@@ -624,4 +625,98 @@ def credibility_check(results: dict, cfg: dict) -> tuple[bool, list[str], str]:
     else:
         status = "insufficient" if insufficient else "failed"
         log.warning("模型未通過可信度檢驗：%s", "；".join(reasons))
+    return credible, reasons, status
+
+
+# ---------- 前瞻門檻接線（2026-11-11；鎖定規格第 7 條） ----------
+
+def evaluate_prospective_gate(cfg: dict, published_dates) -> dict:
+    """評估真實前瞻累積是否達到可轉 credible 的門檻（純函數，可用合成日期測試）。
+
+    門檻來自 config prospective 區段：
+    - min_published_days（預設 120）：實際發布交易日數。
+    - min_nonoverlap_blocks_20d（預設 6）：不重疊 20 日區塊數。
+
+    只計傳入的已發布交易日序列——呼叫方必須只傳 ledger 中 data_class 為
+    prospective 且 published_at >= start_at 的凍結紀錄日期；重建
+    （reconstructed）與 walk-forward 模擬（walkforward_sim）不在此序列中，
+    永不計入。區塊計數口徑見 ledger.count_nonoverlap_blocks（日期排序後
+    貪婪切分，每 20 筆一區塊，餘數捨去）。
+
+    保守規則：published_dates 為 None（進度讀取失敗）或序列為空（尚未開始
+    累積、start_at 未設定）時，一律不通過，不得放行。
+
+    回傳 dict：{"pass", "published_days", "nonoverlap_blocks_20d",
+    "min_published_days", "min_nonoverlap_blocks_20d", "reasons"}。
+    """
+    pcfg = get(cfg, "prospective", default={}) or {}
+    min_days = int(pcfg.get("min_published_days", 120))
+    min_blocks = int(pcfg.get("min_nonoverlap_blocks_20d", 6))
+    out = {
+        "pass": False,
+        "published_days": 0,
+        "nonoverlap_blocks_20d": 0,
+        "min_published_days": min_days,
+        "min_nonoverlap_blocks_20d": min_blocks,
+        "reasons": [],
+    }
+    if published_dates is None:
+        out["reasons"] = ["前瞻累積進度讀取失敗，採保守不放行（無法確認已發布日數）。"]
+        return out
+    dates = sorted({str(d) for d in published_dates})
+    out["published_days"] = len(dates)
+    out["nonoverlap_blocks_20d"] = count_nonoverlap_blocks(dates, 20)
+    reasons: list[str] = []
+    if len(dates) < min_days:
+        reasons.append(
+            f"真實前瞻僅發布 {len(dates)} 個交易日，未達 {min_days} 日門檻。"
+        )
+    if out["nonoverlap_blocks_20d"] < min_blocks:
+        reasons.append(
+            f"真實前瞻僅涵蓋 {out['nonoverlap_blocks_20d']} 個不重疊 20 日區塊，"
+            f"未達 {min_blocks} 個區塊門檻。"
+        )
+    out["pass"] = not reasons
+    out["reasons"] = reasons or [
+        f"真實前瞻已發布 {len(dates)} 個交易日、"
+        f"{out['nonoverlap_blocks_20d']} 個不重疊 20 日區塊，達既定門檻。"
+    ]
+    return out
+
+
+def decide_credibility(*, stats_credible: bool, stats_reasons, stats_status: str,
+                       degenerate: bool, degenerate_cause,
+                       gate: dict) -> tuple[bool, list[str], str]:
+    """合併最終可信度判定：統計驗證 ∧ 輸出健康 ∧ 前瞻門檻，三者缺一不可。
+
+    - 統計驗證（credibility_check 的結果）：未通過時保留其原因，credible 為 False。
+    - 輸出健康：degenerate 為真時 credible 為 False，附退化原因；此處只做
+      安全止血，絕不修復、展開或重排輸出。
+    - 前瞻門檻（evaluate_prospective_gate 的結果）：未達標時 credible 為
+      False，附門檻原因。
+    - 最終不可信時，status 不得停留在 "ok"（否則 meta 會同時說「驗證通過」
+      與「模型不可信」）；原為 "insufficient" 時維持（資料不足的說法更準確）。
+    - 只有三者皆通過才回傳 True。累積天數足夠本身不代表有預測力——統計門檻
+      與輸出健康仍須各自通過，不得因前瞻達標就自動視為有預測力。
+
+    本函數為純函數：同一組輸入必得同一組輸出，呼叫方（update.py）在回測前
+    先以 degenerate=False 算一次（回測需要 gated 的 credible），健康檢查
+    出爐後再以真實 degenerate 值重算一次；兩次皆以原始統計三元組為輸入，
+    原因不會重複累加。
+    """
+    credible = bool(stats_credible)
+    reasons = list(stats_reasons or [])
+    status = stats_status
+    if degenerate:
+        credible = False
+        cause = degenerate_cause or "未提供原因"
+        reasons.append(f"模型輸出退化（原因：{cause}），整批機率失去辨識度。")
+    gate = gate or {}
+    if not gate.get("pass"):
+        credible = False
+        reasons.extend(gate.get("reasons") or ["前瞻門檻未達標（未提供門檻評估結果）。"])
+    # 最終不可信時，status 不得停留在 "ok"（否則 meta 會同時說「驗證通過」
+    # 與「模型不可信」）；原為 "insufficient" 時維持（資料不足的說法更準確）。
+    if not credible and status == "ok":
+        status = "failed"
     return credible, reasons, status
