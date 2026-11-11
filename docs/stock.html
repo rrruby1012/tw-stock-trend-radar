@@ -324,6 +324,14 @@
 
   Promise.all([App.fetchJSON(metaPath), App.fetchLedger()]).then(function (rs) {
     var mr = rs[0], ledger = rs[1];
+    // 無效 JSON（例如存檔含非標準 NaN）：明示該日期資料含無效數值並停止，
+    // 不得以空 meta 繼續渲染（空 meta 會誤判 model_valid 為通過）。
+    if (mr.invalid_json) {
+      showError(isArchive
+        ? "歷史存檔 " + archDate + " 的資料含有無效數值（非標準 JSON），無法顯示。原始存檔保留未更動，請改看其他日期。"
+        : "最新資料含有無效數值（非標準 JSON），無法顯示。請稍後再試或查看歷史存檔。");
+      return;
+    }
     var meta = (mr.ok && mr.data) || {};
     window.__modelValid = meta.model_valid !== false;
     // 輸出退化旗標（2026-11-05 止血）：實驗區據此隱藏趨勢徽章。
@@ -380,7 +388,14 @@
 
     App.fetchJSON(predPath).then(function (pr) {
       if (!pr.ok || !Array.isArray(pr.data)) {
-        showError("預測資料讀取失敗（" + predPath + "）。");
+        // 無效 JSON：明示該日期預測資料含無效數值，不得誤報或換用其他日期。
+        if (pr.invalid_json) {
+          showError(isArchive
+            ? "歷史存檔 " + archDate + " 的預測資料含有無效數值（非標準 JSON），無法顯示。原始存檔保留未更動，請改看其他日期。"
+            : "最新預測資料含有無效數值（非標準 JSON），無法顯示。請稍後再試或查看歷史存檔。");
+        } else {
+          showError("預測資料讀取失敗（" + predPath + "）。");
+        }
         return;
       }
       var p = null;
