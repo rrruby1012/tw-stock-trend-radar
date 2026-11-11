@@ -5,14 +5,24 @@ var App = (function () {
   var NO_DATA = "資料暫無";
 
   /* ---------- 資料讀取 ---------- */
+  // 回傳 {ok, data} 或 {ok:false, error, invalid_json}。
+  // invalid_json：伺服器回應了 HTTP 200 但內容不是合法 JSON（例如存檔含
+  // 非標準 NaN——2026-10-14/15 存檔的 close_raw 即為前例）。呼叫端據此
+  // 明示「該日期資料含無效數值」，不得誤報為「尚未產生」或換用其他日期。
   function fetchJSON(path) {
     return fetch(path, { cache: "no-store" })
       .then(function (r) {
         if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
+        return r.json().catch(function (e) {
+          var err = new Error("invalid JSON: " + e.message);
+          err.invalid_json = true;
+          throw err;
+        });
       })
       .then(function (data) { return { ok: true, data: data }; })
-      .catch(function (e) { return { ok: false, error: e }; });
+      .catch(function (e) {
+        return { ok: false, error: e, invalid_json: !!(e && e.invalid_json) };
+      });
   }
 
   /* ---------- 格式化（null 安全） ---------- */
@@ -346,6 +356,30 @@ var App = (function () {
     } catch (e) { return null; }
   }
 
+  /* ---------- 舊存檔顯示相容（2026-11-11） ---------- */
+  // 舊存檔 meta（2026-10-22 可信度規格前的重建存檔）缺少 data_dates、
+  // is_trading_day、sources 等欄位。顯示層必須相容既有結構，不得重寫歷史 JSON：
+  // - 交易日旗標缺失時顯示「未記錄」，絕不可把「未記錄」當成「非交易日」。
+  // - 股價日期可從頂層 price_date 取得時正常顯示；法人／融資／營收／財報
+  //   日期與來源、歷史驗證值未知時一律顯示「資料暫無」，不得補造，也不得
+  //   拿最新驗證冒充當日結果。
+
+  // 交易日狀態三態：true 交易日 / false 非交易日 / 缺失或非布林值 未記錄。
+  function tradingDayState(meta) {
+    if (!meta) return "unknown";
+    if (meta.is_trading_day === true) return "trading";
+    if (meta.is_trading_day === false) return "non_trading";
+    return "unknown";
+  }
+
+  // 顯示用股價日期：新 meta 取 data_dates.price；舊 meta 只有頂層 price_date
+  // 時以後者為準；兩者皆無時回傳 null（呼叫端以 fmtDate 顯示「資料暫無」）。
+  function displayPriceDate(meta) {
+    if (!meta) return null;
+    var dd = meta.data_dates || {};
+    return dd.price || meta.price_date || null;
+  }
+
   /* ---------- 資料分類與發布 ledger（2026-10 可信度規格） ---------- */
   // 三類資料靠明確欄位分流，禁止以日期/檔名猜測：
   // walkforward_sim（樣本外模擬）、reconstructed（事後重建）、prospective（真實前瞻發布）。
@@ -422,6 +456,8 @@ var App = (function () {
     drawPriceChart: drawPriceChart,
     buildSortableTable: buildSortableTable,
     getQueryParam: getQueryParam,
+    tradingDayState: tradingDayState,
+    displayPriceDate: displayPriceDate,
     declaredClass: declaredClass,
     resolveArchiveClass: resolveArchiveClass,
     fetchLedger: fetchLedger,
