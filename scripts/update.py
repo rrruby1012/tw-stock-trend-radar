@@ -236,12 +236,49 @@ def main() -> int:
     feature_cols = feat_mod.feature_columns(panel)
     log.info("特徵 panel：%s，特徵數 %d", panel.shape, len(feature_cols))
 
-    # 6. walk-forward 驗證 + 可信度
-    from src.validation import credibility_check, walk_forward
+    # 6. walk-forward 驗證 + 可信度（統計門檻）
+    from src.validation import (
+        credibility_check,
+        decide_credibility,
+        evaluate_prospective_gate,
+        walk_forward,
+    )
 
     val_results = walk_forward(panel, feature_cols, cfg)
-    credible, reasons, val_status = credibility_check(val_results, cfg)
-    log.info("模型可信度：%s（%s）[%s]", credible, "; ".join(reasons), val_status)
+    stats_credible, stats_reasons, stats_status = credibility_check(val_results, cfg)
+    log.info("模型可信度（統計）：%s（%s）[%s]",
+             stats_credible, "; ".join(stats_reasons), stats_status)
+
+    # 6b. 前瞻門檻評估（2026-11-11 接線；鎖定規格第 7 條）。
+    # 只計 ledger 已凍結的 prospective 紀錄（prospective_stats 只讀
+    # data_class=prospective 且 published_at >= start_at 者；重建／模擬
+    # 不計入），再加計今日即將凍結的紀錄（尚未寫入 ledger，但本 run 隨後
+    # 會在 9c 發布；若發布衝突，run 會失敗，不會留下錯誤的 meta）。
+    # 進度讀取失敗時 gate_dates 為 None，門檻評估採保守不放行。
+    ledger_dir = docs_dir / "data" / "ledger"
+    try:
+        _pstats = ledger_mod.prospective_stats(
+            ledger_dir, cfg.get("prospective", {}).get("start_at"))
+        gate_dates = list(_pstats.get("dates") or [])
+    except Exception as e:  # noqa: BLE001
+        log.warning("前瞻進度讀取失敗，採保守不放行：%s", e)
+        gate_dates = None
+    if gate_dates is not None and price_date and price_date not in gate_dates:
+        gate_dates = gate_dates + [price_date]
+    gate = evaluate_prospective_gate(cfg, gate_dates)
+    log.info("前瞻門檻：%s（已發布 %d 日、%d 個 20 日區塊；門檻 %d 日、%d 區塊）",
+             gate["pass"], gate["published_days"],
+             gate["nonoverlap_blocks_20d"],
+             gate["min_published_days"], gate["min_nonoverlap_blocks_20d"])
+
+    # 6c. 回測前先以「統計 ∧ 前瞻」判定（輸出健康結果尚未出爐，
+    # degenerate=False；健康檢查出爐後於步驟 8 以同一函數重算最終判定，
+    # 兩次皆以原始統計三元組為輸入，原因不會重複累加）。
+    credible, reasons, val_status = decide_credibility(
+        stats_credible=stats_credible, stats_reasons=stats_reasons,
+        stats_status=stats_status, degenerate=False, degenerate_cause=None,
+        gate=gate,
+    )
 
     # 7. 回測
     from src.backtest import run_backtest
@@ -255,11 +292,17 @@ def main() -> int:
     # 安全止血：輸出退化時強制不可信（即使 walk-forward 門檻碰巧通過，
     # 整批機率失去辨識度的輸出也不得呈現方向）。收盤價、資料日期與
     # ledger 累積照常顯示；退化狀態寫入 meta 與 provenance。
+    # 最終判定以同一純函數重算：統計 ∧ 前瞻 ∧ 健康，三者缺一不可。
     degenerate = bool(output_health.get("degenerate"))
+    credible, reasons, val_status = decide_credibility(
+        stats_credible=stats_credible, stats_reasons=stats_reasons,
+        stats_status=stats_status, degenerate=degenerate,
+        degenerate_cause=output_health.get("cause"), gate=gate,
+    )
     if degenerate:
-        credible = False
         log.warning("輸出退化，已強制 model_valid=false（原因：%s）",
                     output_health.get("cause"))
+    log.info("模型可信度（最終）：%s（%s）[%s]", credible, "; ".join(reasons), val_status)
 
     # 9. 產生網站
     up10m = val_results["targets"]["up_10"]["metrics"]
@@ -401,7 +444,7 @@ def main() -> int:
         model_output_degenerate=degenerate,
         model_output_cause=output_health.get("cause"),
     )
-    ledger_dir = docs_dir / "data" / "ledger"
+    # ledger_dir 已於步驟 6b 定義（docs_dir / "data" / "ledger"），此處沿用。
     try:
         frozen = ledger_mod.publish(ledger_dir, record)
     except ledger_mod.LedgerConflict as e:
