@@ -84,8 +84,11 @@
       bar.appendChild(App.el("span", "badge warn", "歷史存檔：" + App.fmtDate(archDate)));
     }
     bar.appendChild(App.el("span", "", "最後更新：" + App.fmtDateTime(meta.generated_at)));
-    var day = App.el("span", "badge " + (meta.is_trading_day ? "ok" : "muted"),
-      meta.is_trading_day ? "交易日" : "非交易日");
+    // 交易日旗標三態（舊存檔缺此欄時顯示「交易日未記錄」，不得當成非交易日）
+    var dayState = App.tradingDayState(meta);
+    var day = App.el("span", "badge " + (dayState === "trading" ? "ok" : "muted"),
+      dayState === "trading" ? "交易日"
+        : (dayState === "non_trading" ? "非交易日" : "交易日未記錄"));
     bar.appendChild(day);
     if (meta.data_delayed) {
       bar.appendChild(App.el("span", "badge warn", "資料可能延遲（顯示前次正確結果）"));
@@ -236,6 +239,18 @@
     document.getElementById("risk-section").style.display = "";
   }
 
+  // 基準命名（2026-11-11 釐清）：metrics 的 auc_always / brier_always 是
+  // 「訓練窗氣候基準率」（每折訓練窗基準率，混池計算），不是恆多規則；
+  // 恆多規則的 AUC 按定義恆為 0.5，固定 0.5 基準的 Brier 恆為 0.25。
+  // 新 validation.json 的 baselines 四基準分開列出；舊報告缺 baselines 時，
+  // 以 metrics 欄位＋定義常數回退顯示，不得把氣候基準說成恆多規則。
+  function baselineValue(baselines, key, metric, fallback) {
+    var b = (baselines && baselines[key]) || {};
+    var v = b[metric];
+    if (App.isValidNumber(v)) return v;
+    return fallback;
+  }
+
   function renderValidation(meta, validation) {
     var body = document.getElementById("validation-body");
     body.innerHTML = "";
@@ -244,22 +259,46 @@
     var targets = (validation && validation.targets) || {};
     ["up_10", "up_20"].forEach(function (t) {
       var m = (targets[t] && targets[t].metrics) || {};
+      var b = (targets[t] && targets[t].baselines) || null;
       var label = t === "up_10" ? "10 日上漲" : "20 日上漲";
       card.appendChild(App.el("h3", "mt", label));
       card.appendChild(App.kvRow("樣本數",
         App.isValidNumber(m.n) ? Number(m.n).toLocaleString("zh-TW") : App.NO_DATA));
-      card.appendChild(App.kvRow("AUC（模型 / 全猜上漲基準 / 動量基準）",
+      // AUC：模型 / 固定 0.5 / 訓練窗氣候基準率 / 恆多規則 / 動量基準
+      var aucClim = baselineValue(b, "climatology", "auc", m.auc_always);
+      var aucMom = baselineValue(b, "momentum", "auc", m.auc_mom);
+      var aucRule = baselineValue(b, "always_up_rule", "auc", 0.5);
+      var aucConst = baselineValue(b, "const05", "auc", 0.5);
+      card.appendChild(App.kvRow("AUC（模型 / 固定 0.5 / 訓練窗氣候基準率 / 恆多規則 / 動量基準）",
         App.isValidNumber(m.auc)
           ? m.auc.toFixed(3) + " / " +
-            (App.isValidNumber(m.auc_always) ? m.auc_always.toFixed(3) : App.NO_DATA) + " / " +
-            (App.isValidNumber(m.auc_mom) ? m.auc_mom.toFixed(3) : App.NO_DATA)
+            aucConst.toFixed(3) + " / " +
+            (App.isValidNumber(aucClim) ? aucClim.toFixed(3) : App.NO_DATA) + " / " +
+            aucRule.toFixed(3) + " / " +
+            (App.isValidNumber(aucMom) ? aucMom.toFixed(3) : App.NO_DATA)
           : App.NO_DATA));
-      card.appendChild(App.kvRow("Brier score（模型 / 全猜上漲基準 / 動量基準）",
+      // Brier：模型 / 固定 0.5 / 訓練窗氣候基準率 / 恆多規則 / 動量基準
+      var brClim = baselineValue(b, "climatology", "brier", m.brier_always);
+      var brMom = baselineValue(b, "momentum", "brier", m.brier_mom);
+      var brRule = baselineValue(b, "always_up_rule", "brier", null);
+      var brConst = baselineValue(b, "const05", "brier", 0.25);
+      card.appendChild(App.kvRow("Brier score（模型 / 固定 0.5 / 訓練窗氣候基準率 / 恆多規則 / 動量基準）",
         App.isValidNumber(m.brier)
           ? m.brier.toFixed(4) + " / " +
-            (App.isValidNumber(m.brier_always) ? m.brier_always.toFixed(4) : App.NO_DATA) + " / " +
-            (App.isValidNumber(m.brier_mom) ? m.brier_mom.toFixed(4) : App.NO_DATA)
+            brConst.toFixed(4) + " / " +
+            (App.isValidNumber(brClim) ? brClim.toFixed(4) : App.NO_DATA) + " / " +
+            (App.isValidNumber(brRule) ? brRule.toFixed(4) : App.NO_DATA) + " / " +
+            (App.isValidNumber(brMom) ? brMom.toFixed(4) : App.NO_DATA)
           : App.NO_DATA));
+      // Bootstrap 閘門（新報告才有；舊報告缺此欄時不顯示本列）
+      var boot = (targets[t] && targets[t].bootstrap_ci) || null;
+      if (boot) {
+        var gateTxt = boot.gate_pass === true ? "通過"
+          : (boot.gate_pass === false ? "未通過" : "未計算");
+        var reasonTxt = (boot.reasons && boot.reasons.length)
+          ? "（" + boot.reasons.join("；") + "）" : "";
+        card.appendChild(App.kvRow("Bootstrap 閘門（20 日區塊）", gateTxt + reasonTxt));
+      }
     });
     card.appendChild(App.el("p", "small muted",
       "無論模型是否通過驗證，此處皆顯示真實樣本外數據；詳細各期指標請見 validation.json。"));
@@ -273,8 +312,11 @@
     document.getElementById("f-sources").textContent = src;
     var dd = meta.data_dates || {};
     var parts = [];
+    // 股價日期：舊存檔無 data_dates 時，改讀頂層 price_date（見 App.displayPriceDate）；
+    // 其餘類別缺值時顯示「資料暫無」，不得補造（來源、法人／融資日期、歷史驗證值亦同）。
+    var priceDate = App.displayPriceDate(meta);
     [["price", "股價"], ["institutional", "三大法人"], ["margin", "融資融券"], ["revenue", "月營收"], ["financials", "財報"]].forEach(function (p) {
-      parts.push(p[1] + "：" + App.fmtDate(dd[p[0]]));
+      parts.push(p[1] + "：" + App.fmtDate(p[0] === "price" ? priceDate : dd[p[0]]));
     });
     document.getElementById("f-dates").textContent = parts.join("；");
     var u = meta.universe || {};
@@ -392,7 +434,15 @@
     App.fetchJSON(metaPath).then(function (res) {
       if (myId !== loadRequestId) return; // 已被更新的選擇取代
       if (!res.ok) {
-        showError("資料尚未產生（" + metaPath + " 讀取失敗）。請等待自動更新完成後再試。");
+        // 無效 JSON（例如存檔含非標準 NaN）：明示該日期資料含無效數值，
+        // 不得誤報為「尚未產生」或換用其他日期；原始存檔保留未更動。
+        if (res.invalid_json) {
+          showError(isArchive
+            ? "歷史存檔 " + archDate + " 的資料含有無效數值（非標準 JSON），無法顯示。原始存檔保留未更動，請改看其他日期。"
+            : "最新資料含有無效數值（非標準 JSON），無法顯示。請稍後再試或查看歷史存檔。");
+        } else {
+          showError("資料尚未產生（" + metaPath + " 讀取失敗）。請等待自動更新完成後再試。");
+        }
         return;
       }
       var meta = res.data || {};
@@ -416,7 +466,15 @@
           renderValidation(meta, validation);
           renderForward(meta, ledger);
           if (!pr.ok || !Array.isArray(pr.data)) {
-            if (valid) showError("預測資料讀取失敗（" + predPath + "）。");
+            // 無效 JSON 時不論模型是否通過驗證都必須明示（不得無聲空白）；
+            // 一般讀取失敗則維持原有行為（未驗證時不重複顯示錯誤）。
+            if (pr.invalid_json) {
+              showError(isArchive
+                ? "歷史存檔 " + archDate + " 的預測資料含有無效數值（非標準 JSON），無法顯示。原始存檔保留未更動，請改看其他日期。"
+                : "最新預測資料含有無效數值（非標準 JSON），無法顯示。請稍後再試或查看歷史存檔。");
+            } else if (valid) {
+              showError("預測資料讀取失敗（" + predPath + "）。");
+            }
             return;
           }
           if (valid) {
