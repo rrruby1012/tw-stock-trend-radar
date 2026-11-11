@@ -235,6 +235,27 @@ def load_corrections(ledger_dir: str | Path) -> list:
 
 # ---------- prospective 統計（只計 ledger，A/B 永不混入） ----------
 
+def count_nonoverlap_blocks(dates, block_days: int = 20) -> int:
+    """不重疊區塊數：已發布交易日序列排序後貪婪切分，每 block_days 個
+    連續日期為一區塊，餘數捨去（不湊整）。
+
+    計數口徑（2026-11-11 寫入，與既有累積進度同一口徑）：
+    - 交易日：ledger 中 data_class=prospective 且 published_at >= start_at
+      的凍結紀錄日期，每日期至多一筆；重建（reconstructed）與 walk-forward
+      模擬（walkforward_sim）不在此序列中，永不計入。
+    - 區塊：只數序列中的「連續筆數」，不另驗日曆間隔——例如連續 20 筆橫跨
+      一個國定假日時仍計為一區塊（既有口徑為近似值，見 prospective_stats）。
+      在此口徑下，區塊數恆為 日數 // 20，因此「6 區塊」與「120 日」兩個
+      條件實質等價；門檻判定仍同時列出兩者、分別回報，維持鎖定規格的字面
+      要求，不因等價而省略其一。
+    """
+    block_days = int(block_days)
+    if block_days < 1:
+        raise ValueError(f"block_days 必須 >= 1：{block_days}")
+    unique_dates = sorted({str(d) for d in (dates or [])})
+    return len(unique_dates) // block_days
+
+
 def _parse_ts(s) -> "datetime | None":
     """解析 ISO 時間戳為 aware datetime；naive 視為 UTC。
 
@@ -275,12 +296,9 @@ def prospective_stats(ledger_dir: str | Path, start_at: str | None) -> dict:
             continue
         dates.append(e["date"])
     dates.sort()
-    # 不重疊 20 交易日區塊數：以已發布交易日序列貪婪切分（近似，僅供累積進度）
-    blocks = 0
-    i = 0
-    while i + 20 <= len(dates):
-        blocks += 1
-        i += 20
+    # 不重疊 20 交易日區塊數：以已發布交易日序列貪婪切分（近似，僅供累積進度；
+    # 精確口徑見 count_nonoverlap_blocks）。
+    blocks = count_nonoverlap_blocks(dates, 20)
     return {
         "published_days": len(dates),
         "dates": dates,
