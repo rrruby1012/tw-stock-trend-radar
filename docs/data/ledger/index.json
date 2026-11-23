@@ -131,5 +131,12 @@
   "prediction_sha256": "dcf2c8b37c8384997665ff4905b27a421c88c37144bd98b2e20c630441a66d3c",
   "published_at": "2026-11-21T02:50:41.143617+08:00",
   "data_class": "prospective"
+ },
+ {
+  "date": "2026-11-23",
+  "data_cutoff_date": "2026-11-23",
+  "prediction_sha256": "0589cab64db8092387dce20286d9eb6c848c9305c933288189a3e0f35cef7692",
+  "published_at": "2026-11-24T06:18:05.769982+08:00",
+  "data_class": "prospective"
  }
 ]
